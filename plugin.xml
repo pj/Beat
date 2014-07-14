@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            id="Beat"
+            name="Beat Visualization">
+      </category>
+ <!--     <view
+            allowMultiple="true"
+            category="Beat"
+            class="beat.views.BeatView"
+            icon="icons/sample.gif"
+            id="beat.views.BeatView"
+            name="Beat View"> 
+      </view> -->
+         <view
+            allowMultiple="true"
+            category="Beat"
+            class="beat.views.Beat2DView"
+            icon="icons/sample.gif"
+            id="beat.views.Beat2DView"
+            name="Beat 2D View"> 
+      </view>
+         <view
+               category="Beat"
+               class="beat.views.BeatHTMLView"
+               icon="icons/sample.gif"
+               id="beat.views.BeatHTMLView"
+               name="Beat HTML View"
+               restorable="true">
+         </view>
+      
+   </extension>
+   <extension
+         point="org.eclipse.debug.core.launchConfigurationTypes">
+      <launchConfigurationType
+            delegate="beat.BeatLauncher"
+            id="Beat.RunLauncher"
+            modes="run"
+            name="RunLauncher">
+      </launchConfigurationType>
+   </extension>
+   <extension
+         point="org.eclipse.debug.ui.launchConfigurationTabGroups">
+      <launchConfigurationTabGroup
+            class="beat.BeatLaunchConfigurationTabGroup"
+            description="Launch Config for Beat Visualization"
+            id="Beat.launchConfigurationTabGroup"
+            type="Beat.RunLauncher">
+      </launchConfigurationTabGroup>
+   </extension>
+   <extension
+         point="org.eclipse.debug.ui.launchShortcuts">
+      <shortcut
+            class="beat.BeatLaunchShortcut"
+            id="Beat.LaunchShortcut"
+            label="Run Beat"
+            modes="run">
+	  <contextualLaunch>
+	  <enablement>
+	    <with variable="selection">
+	     <count value="1"/>
+	      <iterate>
+	       <or>
+	        <test property="org.eclipse.jdt.launching.hasMain"/>
+	         <and>
+	          <test property="org.eclipse.jdt.launching.isContainer"/>
+	          <test property="org.eclipse.jdt.launching.hasProjectNature" args="org.eclipse.jdt.core.javanature"/>
+	         </and>
+	        </or>
+	      </iterate>
+	     </with>
+	  </enablement>
+	  </contextualLaunch>
+  <configurationType
+    id="org.eclipse.jdt.launching.localJavaApplication">
+  </configurationType>
+
+      </shortcut>
+   </extension>
+   <!--
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="org.eclipse.jdt.ui.JavaPerspective">
+         <view
+               id="beat.views.SampleView"
+               ratio="0.5"
+               relationship="right"
+               relative="org.eclipse.ui.views.TaskList">
+         </view>
+      </perspectiveExtension>
+   </extension>
+   <extension
+         point="org.eclipse.help.contexts">
+      <contexts
+            file="contexts.xml">
+      </contexts>
+   </extension>
+-->
+</plugin>

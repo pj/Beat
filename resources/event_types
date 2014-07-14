@@ -1,0 +1,63 @@
+package beat.collector;
+
+public enum EventType {
+	methodCall,
+	methodEntered,
+	methodExit,
+	
+	lockWaitStart,
+	lockWaitEnd,
+	
+	lockNotify,
+	lockNotifyAll,
+	
+	threadSleepStart,
+	threadSleepEnd,
+	
+	threadJoinStart,
+	threadJoinEnd,
+	
+	threadStart,
+	threadRunEntered,
+	threadRunExit,
+	
+	threadRunEnter,
+	threadRunEnd,
+
+	programEntered,
+	programExit,
+	
+	forLoopIn,
+	forLoopOut,
+	whileLoopIn,
+	whileLoopOut,
+	doLoopIn,
+	doLoopOut,
+	
+	ifStatement,
+	elseStatement,
+	caseStatement,
+	
+	contextSwitch,
+	contextSwitchIn,
+	contextSwitchOut,
+	
+	synchronizedBlockAcquire,
+	synchronizedBlockEntered,
+	synchronizedBlockExit,
+	
+	synchronizedMethodCalled,
+	synchronizedMethodEntered,
+	synchronizedMethodExit,
+	
+	synchronizedMethodWaitStart,
+	synchronizedMethodWaitEnd,
+	
+	fieldWritten,
+	fieldRead,
+	
+	returnStatement,
+	
+	constructorEntered,
+	constructorExit
+}

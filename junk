@@ -1,0 +1,3044 @@
+	public void oldlaunch(ILaunchConfiguration configuration, String mode, ILaunch launch, IProgressMonitor monitor) throws CoreException {
+		
+		if (monitor == null) {
+			monitor = new NullProgressMonitor();
+		}
+		
+		monitor.beginTask(MessageFormat.format("{0}...", new String[]{configuration.getName()}), 3); //$NON-NLS-1$
+		// check for cancellation
+		if (monitor.isCanceled()) {
+			return;
+		}
+		
+		monitor.subTask(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_Verifying_launch_attributes____1); //$NON-NLS-1$
+						
+		String mainTypeName = verifyMainTypeName(configuration);
+		IVMRunner runner = getVMRunner(configuration, mode);
+
+		File workingDir = verifyWorkingDirectory(configuration);
+		String workingDirName = null;
+		if (workingDir != null) {
+			workingDirName = workingDir.getAbsolutePath();
+		}
+		
+		// Environment variables
+		String[] envp= getEnvironment(configuration);
+		
+		// Program & VM args
+		String pgmArgs = getProgramArguments(configuration);
+		String vmArgs = getVMArguments(configuration);
+		ExecutionArguments execArgs = new ExecutionArguments(vmArgs, pgmArgs);
+		
+		// VM-specific attributes
+		Map vmAttributesMap = getVMSpecificAttributesMap(configuration);
+		
+		// Classpath
+		String[] classpath = getClasspath(configuration);
+		
+		// Create VM config
+		VMRunnerConfiguration runConfig = new VMRunnerConfiguration(mainTypeName, classpath);
+		runConfig.setProgramArguments(execArgs.getProgramArgumentsArray());
+		runConfig.setEnvironment(envp);
+		runConfig.setVMArguments(execArgs.getVMArgumentsArray());
+		runConfig.setWorkingDirectory(workingDirName);
+		runConfig.setVMSpecificAttributesMap(vmAttributesMap);
+
+		// Bootpath
+		runConfig.setBootClassPath(getBootpath(configuration));
+		
+		// check for cancellation
+		if (monitor.isCanceled()) {
+			return;
+		}		
+		
+		// stop in main
+		prepareStopInMain(configuration);
+		
+		// done the verification phase
+		monitor.worked(1);
+		
+		monitor.subTask(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_Creating_source_locator____2); //$NON-NLS-1$
+		// set the default source locator if required
+		setDefaultSourceLocator(launch, configuration);
+		monitor.worked(1);		
+		
+		// Launch the configuration - 1 unit of work
+		runner.run(runConfig, launch, monitor);
+		
+		// check for cancellation
+		if (monitor.isCanceled()) {
+			return;
+		}	
+		
+		monitor.done();
+	}
+	
+	
+		public void launch(ILaunchConfiguration configuration, String mode, ILaunch launch, IProgressMonitor monitor) throws CoreException {
+		
+		if (monitor == null) {
+			monitor = new NullProgressMonitor();
+		}
+		
+		monitor.beginTask(MessageFormat.format("{0}...", new String[]{configuration.getName()}), 3); //$NON-NLS-1$
+		// check for cancellation
+		if (monitor.isCanceled()) {
+			return;
+		}
+
+		monitor.subTask(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_Verifying_launch_attributes____1); //$NON-NLS-1$
+		
+		String mainTypeName = verifyMainTypeName(configuration);
+		IVMRunner runner = getVMRunner(configuration, mode);
+
+		File workingDir = verifyWorkingDirectory(configuration);
+		String workingDirName = null;
+		if (workingDir != null) {
+			workingDirName = workingDir.getAbsolutePath();
+		}
+		
+		// Environment variables
+		String[] envp= getEnvironment(configuration);
+		
+		// Program & VM args
+		String pgmArgs = getProgramArguments(configuration);
+		String vmArgs = getVMArguments(configuration);
+		ExecutionArguments execArgs = new ExecutionArguments(vmArgs, pgmArgs);
+		
+		// VM-specific attributes
+		Map vmAttributesMap = getVMSpecificAttributesMap(configuration);
+		
+		// Classpath
+		String[] classpath = getClasspath(configuration);
+		
+		// Create VM config
+		VMRunnerConfiguration runConfig = new VMRunnerConfiguration(mainTypeName, classpath);
+		runConfig.setProgramArguments(execArgs.getProgramArgumentsArray());
+		runConfig.setEnvironment(envp);
+		runConfig.setVMArguments(execArgs.getVMArgumentsArray());
+		runConfig.setWorkingDirectory(workingDirName);
+		runConfig.setVMSpecificAttributesMap(vmAttributesMap);
+
+		// Bootpath
+		runConfig.setBootClassPath(getBootpath(configuration));
+		
+		// check for cancellation
+		if (monitor.isCanceled()) {
+			return;
+		}
+
+		// stop in main - probably not needed
+		// prepareStopInMain(configuration);
+		
+		// done the verification phase
+		monitor.worked(1);
+		
+		monitor.subTask(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_Creating_source_locator____2); //$NON-NLS-1$
+		// set the default source locator if required
+		setDefaultSourceLocator(launch, configuration);
+		monitor.worked(1);
+		
+		// Launch the configuration - 1 unit of work
+		// runner.run(runConfig, launch, monitor);
+		
+		monitor.subTask("Launching Debug for Visualization");
+		
+		// find launching connector
+
+		LaunchingConnector launchingConnector = null;
+		
+		VirtualMachineManager vmm = Bootstrap.virtualMachineManager();
+		
+		List connectors = org.eclipse.jdi.Bootstrap.virtualMachineManager().allConnectors();
+		
+		for (Object connector : connectors) {
+			if (((Connector)connector).name().equals("com.sun.jdi.CommandLineLaunch")) {
+				launchingConnector = (LaunchingConnector)connector;
+				break;
+			}
+		}
+		
+		if(launchingConnector == null)
+			abort("Launching Connector Not Found", new Exception(), 0);
+		
+		// find connector arguments
+		
+		Map arguments = launchingConnector.defaultArguments();
+		Connector.Argument mainArg = (Connector.Argument) arguments.get("main");
+		Connector.Argument homeArg = (Connector.Argument) arguments.get("home");
+		Connector.Argument optionsArg = (Connector.Argument) arguments.get("options"); 	
+		Connector.Argument suspendArg = (Connector.Argument) arguments.get("suspend");
+		Connector.Argument quoteArg = (Connector.Argument) arguments.get("quote");
+		Connector.Argument vmexecArg = (Connector.Argument) arguments.get("vmexec");
+
+		if(mainArg == null)
+			abort("Launching Connector Not Found", new Exception(), 0);
+		
+		mainArg.setValue(mainTypeName + " " + pgmArgs);
+		
+		if(optionsArg == null)
+			abort("Launching Connector Not Found", new Exception(), 0);
+		
+		// create options
+		StringBuilder sb = new StringBuilder();
+		sb.append(vmArgs);
+		sb.append(" -classpath ");
+		//sb.append("-server");
+		//sb.append(" ");
+
+		boolean separator = false;
+		
+		for(String cp : classpath){
+			sb.append(cp);
+			
+			if(separator)
+				sb.append(";");
+
+			separator = true;
+		}
+		sb.append(" ");
+		
+		optionsArg.setValue(sb.toString());
+
+//		if (watchFields) {
+//			// We need a VM that supports watchpoints
+//			Connector.Argument optionArg = (Connector.Argument) arguments
+//					.get("options");
+//			if (optionArg == null) {
+//				throw new Error("Bad launching connector");
+//			}
+//			optionArg.setValue("-classic");
+//		}
+		
+		// analyse annotations
+		
+		try {
+			vm = launchingConnector.launch(arguments);
+		} catch (IOException exc) {
+			throw new Error("Unable to launch target VM: " + exc);
+		} catch (IllegalConnectorArgumentsException exc) {
+			throw new Error("Internal error: " + exc);
+		} catch (VMStartException exc) {
+			throw new Error("Target VM failed to initialize: " + exc.getMessage());
+		}
+		
+		//vm.setDebugTraceMode(debugTraceMode);
+		BeatEventThread eventThread = new BeatEventThread(vm, events);
+		eventThread.setEventRequests();
+		eventThread.start();
+		
+		Process process = vm.process();
+
+		// Copy target's output and error to our output and error.
+		errThread = new StreamRedirectThread("error reader", process.getErrorStream(), System.err);
+		outThread = new StreamRedirectThread("output reader", process.getInputStream(), System.out);
+		errThread.start();
+		outThread.start();
+		
+		vm.resume();
+
+		// Shutdown begins when event thread terminates
+		try {
+			eventThread.join();
+			errThread.join(); // Make sure output is forwarded
+			outThread.join(); // before we exit
+		} catch (InterruptedException exc) {
+			// we don't interrupt
+		}
+		
+		monitor.worked(1);
+		
+		// check for cancellation
+		if (monitor.isCanceled()) {
+			return;
+		}	
+		
+		monitor.done();
+	}
+	
+	//	monitor.subTask(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_Verifying_launch_attributes____1); //$NON-NLS-1$	
+//	IVMRunner runner = getVMRunner(configuration, mode);
+//
+//			File workingDir = verifyWorkingDirectory(configuration);
+//			String workingDirName = null;
+//			if (workingDir != null) {
+//				workingDirName = workingDir.getAbsolutePath();
+//			}
+//			
+//			// Environment variables
+//			String[] envp= getEnvironment(configuration);
+//			
+//			// Program & VM args
+//			String pgmArgs = getProgramArguments(configuration);
+//			String vmArgs = getVMArguments(configuration);
+//			ExecutionArguments execArgs = new ExecutionArguments(vmArgs, pgmArgs);
+//			
+//			// VM-specific attributes
+//			Map vmAttributesMap = getVMSpecificAttributesMap(configuration);
+//			
+//			// Classpath
+//			String[] classpath = getClasspath(configuration);
+//			
+//			// Create VM config
+//			VMRunnerConfiguration runConfig = new VMRunnerConfiguration(mainTypeName, classpath);
+//			runConfig.setProgramArguments(execArgs.getProgramArgumentsArray());
+//			runConfig.setEnvironment(envp);
+//			runConfig.setVMArguments(execArgs.getVMArgumentsArray());
+//			runConfig.setWorkingDirectory(workingDirName);
+//			runConfig.setVMSpecificAttributesMap(vmAttributesMap);
+//
+//			// Bootpath
+//			runConfig.setBootClassPath(getBootpath(configuration));
+//			
+//			// check for cancellation
+//			if (monitor.isCanceled()) {
+//				return;
+//			}
+//
+//			// stop in main - probably not needed
+//			// prepareStopInMain(configuration);
+//			
+//			// done the verification phase
+//			monitor.worked(1);
+
+//	if (watchFields) {
+//	// We need a VM that supports watchpoints
+//	Connector.Argument optionArg = (Connector.Argument) arguments
+//			.get("options");
+//	if (optionArg == null) {
+//		throw new Error("Bad launching connector");
+//	}
+//	optionArg.setValue("-classic");
+//}
+	
+	//
+//	// Mode for tracing the Trace program (default= 0 off)
+//	//private int debugTraceMode = 0;
+//
+//	// Do we want to watch assignments to fields
+//	private boolean watchFields = false;
+//
+//	// Class patterns for which we don't want events
+//	//private String[] excludes = { "java.*", "javax.*", "sun.*", "com.sun.*" };
+	
+	
+	//		String viewId = "beat.views.BeatView";
+//		
+//		IWorkbench workbench = PlatformUI.getWorkbench();
+//		
+//		IWorkbenchWindow mainWindow = workbench.getWorkbenchWindows()[0];
+//	
+//		for(IWorkbenchWindow window : workbench.getWorkbenchWindows())
+//			System.out.println(window);
+//		
+//		mainWindow.getActivePage().showView(viewId);
+		
+//		IWorkbench workbench = PlatformUI.getWorkbench();
+//		
+//		ICommandService commandService = (ICommandService)workbench.getService(ICommandService.class);
+// 		IHandlerService handlerService = (IHandlerService)workbench.getService(IHandlerService.class);
+// 		Command showView = commandService.getCommand("org.eclipse.ui.views.showView");
+// 		IParameter viewIdParm = null;
+//		try {
+//			viewIdParm = showView.getParameter("org.eclipse.ui.views.showView.viewId");
+//		} catch (NotDefinedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+// 
+// 		// the viewId parameter provides a list of valid values ... if you
+// 		// knew the id of the problem view, you could skip this step.
+// 		// This method is supposed to be used in places like the keys
+// 		// preference page, to allow the user to select values
+// 		IParameterValues parmValues = null;
+//		try {
+//			parmValues = viewIdParm.getValues();
+//		} catch (ParameterValuesException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+// 		String viewId = null;
+// 		Iterator i = parmValues.getParameterValues().values().iterator();
+// 		while (i.hasNext()) {
+// 			String id = (String) i.next();
+// 			if (id.indexOf("beat.views.BeatView") != -1) {
+// 				viewId = id;
+// 				break;
+// 			}
+// 		}
+// 
+// 		Parameterization parm = new Parameterization(viewIdParm, viewId);
+// 		ParameterizedCommand parmCommand = new ParameterizedCommand(showView, new Parameterization[] { parm });
+// 
+// 		try {
+//			handlerService.executeCommand(parmCommand, null);
+//		} catch (ExecutionException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (NotDefinedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (NotEnabledException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (NotHandledException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+
+//import com.sun.jdi.Bootstrap;
+//import com.sun.jdi.VirtualMachine;
+//import com.sun.jdi.VirtualMachineManager;
+//import com.sun.jdi.connect.Connector;
+//import com.sun.jdi.connect.IllegalConnectorArgumentsException;
+//import com.sun.jdi.connect.LaunchingConnector;
+//import com.sun.jdi.connect.VMStartException;
+//
+//import com.sun.jdi.*;
+//import com.sun.jdi.event.*;
+//import com.sun.jdi.request.*;
+
+//	public void launch(ILaunchConfiguration configuration, String mode, ILaunch launch, IProgressMonitor monitor) throws CoreException {
+//		
+//		if (monitor == null)
+//			monitor = new NullProgressMonitor();
+//		
+//		monitor.beginTask(MessageFormat.format("{0}...", new String[]{configuration.getName()}), 3); //$NON-NLS-1$
+//		
+//		// check for cancellation
+//		if (monitor.isCanceled())
+//			return;
+//		
+//		monitor.subTask(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_Creating_source_locator____2); //$NON-NLS-1$
+//		// set the default source locator if required
+//		setDefaultSourceLocator(launch, configuration);
+//		monitor.worked(1);
+//		
+//		monitor.subTask("Launching Debug for Visualization");
+//		
+//		// find launching connector
+//		LaunchingConnector launchingConnector = findLaunchingConnector();
+//		
+//		Map arguments = connectorArguments(configuration, launchingConnector);
+//		
+//		// analyse annotations
+//		final Map<String, ArrayList<String>> annotations = findAnnotations(configuration);
+//		
+//		final List<String> packageNames = findPackageNames(configuration);
+//		
+//		final RootModel model = runTrace(launchingConnector, arguments, annotations, packageNames);
+//		
+//		monitor.worked(1);
+//		
+//		// check for cancellation
+//		if (monitor.isCanceled())
+//			return;
+//		
+//		displayResults(model);
+//		
+//		monitor.done();
+//	}
+//	
+//	private RootModel runTrace(LaunchingConnector launchingConnector, Map arguments, Map<String, ArrayList<String>> annotations, List<String> packageNames){
+//		
+//		VirtualMachine vm;
+//		
+//		try {
+//			vm = launchingConnector.launch(arguments);
+//		} catch (IOException exc) {
+//			throw new Error("Unable to launch target VM: " + exc);
+//		} catch (IllegalConnectorArgumentsException exc) {
+//			throw new Error("Internal error: " + exc);
+//		} catch (VMStartException exc) {
+//			throw new Error("Target VM failed to initialize: " + exc.getMessage());
+//		}
+//		
+//		ArrayList<Event> events = new ArrayList<Event>();
+//		
+//		//vm.setDebugTraceMode(debugTraceMode);
+//		BeatEventThread eventThread = new BeatEventThread(vm, events, annotations, packageNames);
+//		eventThread.setEventRequests();
+//		eventThread.start();
+//		
+//		Process process = vm.process();
+//		
+//		// Copy target's output and error to our output and error.
+//		Thread errThread = new StreamRedirectThread("error reader", process.getErrorStream(), System.err);
+//		Thread outThread = new StreamRedirectThread("output reader", process.getInputStream(), System.out);
+//		errThread.start();
+//		outThread.start();
+//		
+//		vm.resume();
+//
+//		// Shutdown begins when event thread terminates
+//		try {
+//			eventThread.join();
+//			errThread.join(); // Make sure output is forwarded
+//			outThread.join(); // before we exit
+//		} catch (InterruptedException exc) {
+//			// we don't interrupt
+//		}
+//		
+//		return eventThread.model;
+//	}
+//	
+//	private void displayResults(final RootModel model){
+//		// process results
+//		
+//		Display.getDefault().asyncExec(new Runnable() {
+//			  public void run() {
+//					String viewId = "beat.views.BeatView";
+//					
+//					IWorkbench workbench = PlatformUI.getWorkbench();
+//					
+//					IWorkbenchWindow mainWindow = workbench.getActiveWorkbenchWindow();
+//					
+//					try {
+//						
+//						BeatView view = (BeatView)mainWindow.getActivePage().showView(viewId);
+//					
+//						view.setModel(model);
+//					} catch (PartInitException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//			  }
+//		});
+//	}
+//
+//	private LaunchingConnector findLaunchingConnector() throws CoreException {
+//		LaunchingConnector launchingConnector = null;
+//		
+//		VirtualMachineManager vmm = Bootstrap.virtualMachineManager();
+//		
+//		List connectors = org.eclipse.jdi.Bootstrap.virtualMachineManager().allConnectors();
+//		
+//		for (Object connector : connectors) {
+//			if (((Connector)connector).name().equals("com.sun.jdi.CommandLineLaunch")) {
+//				launchingConnector = (LaunchingConnector)connector;
+//				break;
+//			}
+//		}
+//		
+//		if(launchingConnector == null)
+//			abort("Launching Connector Not Found", new Exception(), 0);
+//		return launchingConnector;
+//	}
+//
+//	// find connector arguments
+//	private Map connectorArguments(ILaunchConfiguration configuration, LaunchingConnector launchingConnector)
+//			throws CoreException {
+//
+//		String mainTypeName = verifyMainTypeName(configuration);
+//		
+//		String pgmArgs = getProgramArguments(configuration);
+//		String vmArgs = getVMArguments(configuration);
+//		String[] classpath = getClasspath(configuration);
+//		
+//		Map arguments = launchingConnector.defaultArguments();
+//		Connector.Argument mainArg = (Connector.Argument) arguments.get("main");
+//		Connector.Argument homeArg = (Connector.Argument) arguments.get("home");
+//		Connector.Argument optionsArg = (Connector.Argument) arguments.get("options"); 	
+//		Connector.Argument suspendArg = (Connector.Argument) arguments.get("suspend");
+//		Connector.Argument quoteArg = (Connector.Argument) arguments.get("quote");
+//		Connector.Argument vmexecArg = (Connector.Argument) arguments.get("vmexec");
+//
+//		if(mainArg == null)
+//			abort("Launching Connector Not Found", new Exception(), 0);
+//		
+//		mainArg.setValue(mainTypeName + " " + pgmArgs);
+//		
+//		if(optionsArg == null)
+//			abort("Launching Connector Not Found", new Exception(), 0);
+//		
+//		// create options
+//		StringBuilder sb = new StringBuilder();
+//		sb.append(vmArgs);
+//		sb.append(" -classpath ");
+//		//sb.append("-server");
+//		//sb.append(" ");
+//
+//		boolean separator = false;
+//		
+//		for(int i = classpath.length-1;i >= 0;i--){
+//			String cp = classpath[i];
+//			if(separator)
+//				sb.append(" -classpath ");
+//
+//			separator = true;
+//			
+//			sb.append(cp);
+//		}
+//		sb.append(" ");
+//		
+//		optionsArg.setValue(sb.toString());
+//		//System.out.println(sb.toString());
+//		return arguments;
+//	}
+//	
+//	public Map<String,ArrayList<String>> findAnnotations(ILaunchConfiguration configuration) throws CoreException {
+//		IJavaProject ijp = getJavaProject(configuration);
+//		
+//		IProject ip = ijp.getProject();
+//		
+//		URI root = ip.getWorkspace().getRoot().getRawLocationURI();
+//		
+//		Map<String,ArrayList<String>> fields = new HashMap<String,ArrayList<String>>();
+//		
+//		for(IClasspathEntry ice : ijp.getRawClasspath()){
+//			if(IClasspathEntry.CPE_SOURCE == ice.getEntryKind()){
+//				
+//				try {
+//					analyzeAnnotations(new File(new URI(root.toString() + ice.getPath().toString())), fields);
+//				} catch (URISyntaxException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+//		
+//		return fields;
+//	}
+//		
+//	private void analyzeAnnotations(File root, Map<String,ArrayList<String>> fields){
+//
+//		if(root.isDirectory()){
+//			for(File f : root.listFiles()){
+//				analyzeAnnotations(f, fields);
+//			}
+//		}else if(root.isFile()){
+//			String name = root.getName();
+//
+//			if(name.charAt(0) != '.' && name.contains(".class")){
+//				try {
+//					FileInputStream fis = new FileInputStream(root);
+//					ClassReader cr = new ClassReader(fis);
+//					BeatClassVisitior bcv = new BeatClassVisitior();
+//					
+//					cr.accept(bcv, 0);
+//					if(bcv.bfv.fields.size() > 0 || bcv.hasBeatAnnotation){
+//						String className = bcv.className.replace('/', '.');
+//						fields.put(className, bcv.bfv.fields);
+//					}	
+//				} catch (FileNotFoundException e) {
+//					e.printStackTrace();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+//	}
+//	
+//	private List<String> findPackageNames(ILaunchConfiguration configuration) throws CoreException{
+//		IJavaProject ijp = getJavaProject(configuration);
+//		
+//		IPackageFragmentRoot[] roots = ijp.getPackageFragmentRoots();
+//		
+//		IJavaElement[] ije = ijp.getChildren();
+//		
+////		for(IJavaElement ij : ije){
+////			System.out.println(ij.getElementName());
+////			switch(ij.getElementType()){
+////			
+////			}
+////		}
+//		
+////		IPackageFragment[] ipf = ijp.getPackageFragments();
+////		
+////		for(IPackageFragment frag : ipf){
+////			if(frag.getKind() == IPackageFragmentRoot.K_SOURCE){
+////				System.out.println(frag.getElementName());
+////			}
+////		}
+//		ArrayList<String> excludes = new ArrayList<String>();
+//		for(IPackageFragmentRoot root : roots){
+//			if(root.getKind() == IPackageFragmentRoot.K_SOURCE){
+//				//System.out.println(root.getElementName());
+//				
+//				IJavaElement[] pf = root.getChildren();
+//				
+//				for(IJavaElement elem: pf){
+//					if(!elem.getElementName().equals("")){
+//						excludes.add(elem.getElementName() + ".*");
+//					}
+//				}
+//			}
+//		}
+//		return excludes;
+//	}
+
+//		this.objects = new ObjectsModel();
+//		this.threadsModel = new ThreadsModel();
+//		this.data = data;
+//		
+//		// extract thread sequence
+//		for(Event event : this.data){
+//			//System.out.println(event.getClass());
+//			if(event instanceof ThreadStartEvent)
+//				threadStart((ThreadStartEvent) event);
+//			else if(event instanceof ThreadDeathEvent)
+//				threadDeath((ThreadDeathEvent) event);
+//			else if(event instanceof AccessWatchpointEvent)
+//				;
+//			else if(event instanceof ModificationWatchpointEvent)
+//				;
+//			else if(event instanceof MethodEntryEvent)
+//				methodEntry((MethodEntryEvent) event);
+//			else if(event instanceof MethodExitEvent)
+//				methodExit((MethodExitEvent) event);
+//			else if(event instanceof ExceptionEvent)
+//				;
+//		}
+//	}
+//
+//	private void methodExit(MethodExitEvent event) {
+//		// TODO Auto-generated method stub
+//		
+//	}
+//
+//	private void methodEntry(MethodEntryEvent eventPlus) {
+//		
+//		
+//		
+////		MethodEntryEvent event = eventPlus.event;
+////		ObjectReference object = eventPlus.object;	
+////		ThreadReference thread = event.thread();
+////		
+////		ThreadModel threadModel = threadsModel.findThread(thread);
+////		
+////		// find the type and file of this method call
+////		ReferenceType referenceType = event.method().declaringType();
+////		
+////		FileModel file = files.get(referenceType);
+////		
+////		if(file == null){
+////			
+////		}
+////		
+//		// create thread action
+//		
+//		//System.out.print(me.method().name());
+//		//System.out.print(' ');
+//		//System.out.print(me.location().sourceName());
+//		//System.out.println(' ');
+//	}
+//
+//	private void threadDeath(ThreadDeathEvent event) {
+//	}
+//
+//	private void threadStart(ThreadStartEvent event) {
+//		ThreadModel tm = new ThreadModel(event.thread());
+//		
+//		threadsModel.threads.add(tm);
+//	}
+//	
+
+		// Settings for beat probe instrumentation
+
+//		String[] instArgs = runConfig.getVMArguments();
+//		String[] newInstArgs = new String[instArgs.length + 1];
+//		System.arraycopy(instArgs, 0, newInstArgs, 0, instArgs.length);
+//		//newInstArgs[instArgs.length] = "-javaagent:" + agentUrl.toExternalForm();///Users/pauljohnson/masters/Beat/Beat/beat-agent.jar";
+//		newInstArgs[instArgs.length] = "-javaagent:/Users/pauljohnson/masters/Beat/Beat/beat-agent.jar";
+		
+		// ajc agent
+		String[] instArgs = runConfig.getVMArguments();
+		String[] newInstArgs = new String[instArgs.length + 2];
+		System.arraycopy(instArgs, 0, newInstArgs, 0, instArgs.length);
+		//newInstArgs[instArgs.length] = "-javaagent:" + agentUrl.toExternalForm();///Users/pauljohnson/masters/Beat/Beat/beat-agent.jar";
+		newInstArgs[instArgs.length] = "-javaagent:/Users/pauljohnson/javalibs/lib/aspectjweaver.jar";
+		//newInstArgs[instArgs.length+1] = "-javaagent:/Users/pauljohnson/masters/Beat/Beat/beat-agent.jar";
+		
+		runConfig.setVMArguments(newInstArgs);
+		
+		IVMRunner runner = getVMRunner(configuration, mode);
+
+		
+	private RootModel loadSynchronized(ILaunchConfiguration configuration) throws CoreException{
+		File directory = this.getWorkingDirectory(configuration);
+
+		ArrayList<Event> events;
+		try {
+			FileInputStream fis = new FileInputStream(directory.getAbsolutePath() + "/.beat_events");
+			ObjectInputStream ois = new ObjectInputStream(fis);
+
+			events = (ArrayList<Event>) ois.readObject();
+
+			ois.close();
+		} catch (FileNotFoundException e) {
+			abort("File Not Found!", e, 0);
+		} catch (IOException e) {
+			abort("IOException!", e, 0);
+		} catch (ClassNotFoundException e) {
+			abort("Event Class not found!", e, 0);
+		}
+		
+		return null;
+	}
+	
+	public void createSynchronized(){
+		
+	}
+	
+	//		int maxerrs = 10;
+//
+//		int maxwarns = 10;
+//
+//		boolean nowarn = cmd.hasOption("nowarn");
+//        
+//        final int maxErrors = 10;
+//        final int maxWarnings = 10;
+//        compiler.setCompilationProblemHandler(new CompilationProblemHandler() {
+//        	int errors = 0;
+//        	int warnings = 0;
+//        	public boolean handle(final CompilationProblem pProblem) {
+//
+//        		if (pProblem.isError()) {
+//        			System.err.println(pProblem);
+//
+//        			errors++;
+//
+//        			if (errors >= maxErrors) {
+//        				return false;
+//        			}
+//        		} else {
+//        			if (!nowarn) {
+//        				System.err.println(pProblem);
+//        			}
+//
+//        			warnings++;
+//
+//        			if (warnings >= maxWarnings) {
+//        				return false;
+//        			}
+//        		}
+//
+//        		return true;
+//        	}
+//        });
+
+
+		// Environment variables
+		//String[] envp = getEnvironment(configuration);
+		
+//		JavacJavaCompiler compiler = new JavacJavaCompiler();
+//		
+//		FileResourceReader frr = new FileResourceReader(new File(projectBase));
+//		
+//		MemoryResourceStore mrs = new MemoryResourceStore();
+//		
+//		compiler.createDefaultSettings();
+//		
+//		compiler.compile(pClazzNames, frr, mrs, pClassLoader);
+//		
+//		// Classpath
+//		ArrayList<String> optionList = new ArrayList<String>();
+//		optionList.add("-d");
+//		optionList.add(projectBase + "/bin");
+//		optionList.add("-cp");
+//		optionList.add(getClasspath(configuration).);
+//		optionList.add(projectBase + "/preprocessor-src");
+				
+		//Main.compile(optionList.toArray(), new PrintWriter(System.out));
+		
+		
+		 
+
+//		final CommandLineParser parser = new GnuParser();
+//
+//		final CommandLine cmd = parser.parse(options, args, true);
+
+
+//		File sourcepath = new File(projectBase + "/preprocessor-src");
+//		File targetpath = new File(projectBase + "/bin");
+//
+//		JavaCompiler compiler = new JavaCompilerFactory().createCompiler("javac");
+//		JavaCompilerSettings settings = compiler.createDefaultSettings();
+//
+//		String[] values = getClasspath(configuration);
+//		URL[] urls = new URL[values.length];
+//		for (int i = 0; i < urls.length; i++) {
+//			try {
+//				urls[i] = new File(values[i]).toURL();
+//			} catch (MalformedURLException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+//		
+//		ClassLoader classloader = new URLClassLoader(urls);
+//
+//        ResourceReader reader = new FileResourceReader(sourcepath);
+//        ResourceStore store = new FileResourceStore(targetpath);
+//        
+//        compiler.setCompilationProblemHandler(new CompilationProblemHandler() {
+//        	public boolean handle(final CompilationProblem pProblem) {
+//
+//        		if (pProblem.isError()) {
+//        			System.err.println(pProblem);
+//        		}
+//
+//        		return true;
+//        	}
+//        });
+//
+//        CompilationResult result = compiler.compile(null, reader, store, classloader);
+//        CompilationProblem[] problems = result.getErrors();
+//        if(problems.length > 0){
+//        	abort(StringUtils.join(problems), null, 0);
+//        }
+
+//		try {
+//			Object[] resources = project.getNonJavaResources();
+//			
+//			for(Object resource : resources){
+//				if(resource instanceof IFile){
+//					IFile fileResource = (IFile)resource;
+//					System.out.println(fileResource.getName());
+//				}
+//			}
+//		} catch (JavaModelException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+
+	/*printf("TID 0x%08x curthread 0x%08x\n", tid, (uint32_t)curthread);*/
+	
+	ut = (uthread_t)curthread->uthread;
+	th = (uintptr_t)ut->uu_threadlist;
+	offset = offsetof(struct threadlist, th_thread);
+	/*trace(th);*/
+	
+	/*th = tl->thread_t;*/
+	
+	
+					switch(previous.eventType){
+				case caseStatement:
+					break;
+				case doLoop:
+					break;
+				case elseStatement:
+					break;
+				case forLoop:
+					break;
+				case ifStatement:
+					break;
+				case lockAcquire:
+					break;
+				case lockEnter:
+					break;
+				case lockExit:
+					break;
+				case lockNotify:
+					break;
+				case lockNotifyAll:
+					break;
+				case lockWaitEnd:
+					break;
+				case lockWaitStart:
+					break;
+				case loopEnd:
+					break;
+				case mainEntered:
+					break;
+				case methodEnd:
+					break;
+				case methodLockedEnd:
+					break;
+				case methodLockedStart:
+					break;
+				case methodStart:
+					break;
+				case programEnd:
+					break;
+				case programStart:
+					break;
+				case threadJoinEnd:
+					break;
+				case threadJoinStart:
+					break;
+				case threadRunEnd:
+					break;
+				case threadRunEnter:
+					break;
+				case threadSleepEnd:
+					break;
+				case threadSleepStart:
+					break;
+				case threadStart:
+					break;
+				case whileLoop:
+					
+					break;
+				}
+				
+					private ArrayList<File> preprocessSource(ArrayList<ICompilationUnit> files,
+			String projectBase) throws JavaModelException {
+		
+		Java2Lexer lexer = new Java2Lexer();
+		ArrayList<File> sourceFiles = new ArrayList<File>();
+		
+		for(ICompilationUnit icu : files){
+			
+			ISourceReference sourceRef = (ISourceReference)icu;
+			
+			ByteArrayInputStream bs = new ByteArrayInputStream(sourceRef.getSource().getBytes());
+			
+			String prp = ((IFile)icu.getCorrespondingResource()).getProjectRelativePath().toString();
+			
+			try {
+				lexer.setCharStream(new ANTLRInputStream(bs));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			CommonTokenStream tokens = new CommonTokenStream();
+			tokens.discardOffChannelTokens(true);
+			tokens.setTokenSource(lexer);
+			tokens.LT(1); // force load
+	
+			// Create a parser that reads from the scanner
+			Java2Parser parser = null;
+			parser = new Java2Parser(tokens);
+			File f = new File(projectBase + "/preprocessor-" + prp);
+			sourceFiles.add(f);
+			try {
+				FileUtils.touch(f);
+				parser.output = new FileWriter(f);
+				
+				// start parsing at the compilationUnit rule
+				parser.compilationUnit();
+				
+				parser.output.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (RecognitionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+		return sourceFiles;
+	}
+	
+		private void processBlock(CommonTree tree, FileWriter fileWriter, 
+					boolean inStatic, String inProbe, String outProbe) throws IOException{
+		for(int i = 0; i < tree.getChildCount(); i++){
+			CommonTree child = (CommonTree) tree.getChild(i);
+			String nodeText = child.getText();
+			
+			if(nodeText.equals("{")){
+				fileWriter.append(nodeText);
+				fileWriter.append(inProbe);
+			}else if(nodeText.equals("}")){
+				fileWriter.append(outProbe);
+				fileWriter.append(nodeText);
+			}else{
+				fileWriter.append(nodeText);
+				processMethod(child, fileWriter, inStatic);
+			}
+		}
+	}
+	
+	private void processSynchronised(){
+		
+	}
+	
+	private void processFile(CommonTree tree, FileWriter fileWriter, String currentType) throws IOException {
+		if(tree != null){
+			fileWriter.append(tree.getText());
+			
+			String nodeText = tree.getText();
+			
+			boolean outputting = false;
+			
+			if(nodeText != null){
+				if(nodeText.equals("synchronised") || nodeText.equals("if") ||
+					nodeText.equals("while") || nodeText.equals("for") ||
+					nodeText.equals("do")){
+					currentType = nodeText;
+					
+				}
+				
+				if(nodeText.equals("{")){
+					if(nodeText.equals("synchronised"))
+						fileWriter.append("TimestampCollector.probe(EventType., id,  " +
+								" Thread.currentThread().getName() , newClass.getName(), " +
+								"joinPoint.getSignature().getName()," +
+								tree.getLine() + ");");
+					else if(nodeText.equals("if"))
+						;
+					else if(nodeText.equals("while"))
+						fileWriter.append("TimestampCollector.probe(EventType.whileLoop, id,  " +
+								" Thread.currentThread().getName() , newClass.getName(), " +
+								"joinPoint.getSignature().getName()," +
+								tree.getLine() + ");");
+					else if(nodeText.equals("for"))
+						;
+					else if(nodeText.equals("do"))
+						;
+					else
+						;
+					
+					// null currentType so nothing is passed down 
+					// to the children in the block
+					currentType = null;
+					outputting = true;
+				}
+			}
+			
+			for(int i = 0; i < tree.getChildCount()-1;i++){
+				CommonTree node = (CommonTree)tree.getChild(i);
+				
+				processFile(node, fileWriter, currentType);
+			}
+			
+			fileWriter.append(tree.getChild(tree.getChildCount()-1).getText());
+		}
+	}
+	
+    public void printTree(CommonTree t, int indent) {
+    	System.out.println("=======================================");
+        System.out.println(t.toString());
+        printTreeHelper(t, indent);
+    }
+
+    private void printTreeHelper(CommonTree t, int indent) {
+        if (t != null) {
+            StringBuffer sb = new StringBuffer(indent);
+            for (int i = 0; i < indent; i++)
+                sb = sb.append("   ");
+            for (int i = 0; i < t.getChildCount(); i++){
+                //if (t.getChild(i).getType()==4)
+                System.out.println(sb.toString() + t.getChild(i).toString()
+                + " [" + JavaParser.tokenNames[t.getChild(i).getType()]
+                + "]");
+                printTreeHelper((CommonTree) t.getChild(i), indent + 1);
+            }
+        }
+    }
+    
+    	private void processClass(CommonTree tree, FileWriter fileWriter ) throws IOException{
+		boolean inStatic = false;
+		
+		for(int i = 0; i < tree.getChildCount(); i++){
+			CommonTree child = (CommonTree)tree.getChild(i);
+			String nodeText = child.getText();
+			
+			fileWriter.append(nodeText);
+			
+			if(nodeText.equals("static")){
+				inStatic = true;
+			}
+			
+			if(nodeText.equals(";") || nodeText.equals("}")){
+				inStatic = false;
+			}
+			
+			// in method
+			if(child.getChildCount() > 0){
+				processMethod(child, fileWriter, inStatic);
+				
+				inStatic = false;
+			}
+			
+		}
+	}
+	
+	private void processMethod(CommonTree tree, FileWriter fileWriter, boolean inStatic) throws IOException{
+		for(int i = 0; i < tree.getChildCount(); i++){
+			CommonTree child = (CommonTree) tree.getChild(i);
+			String nodeText = tree.getText();
+			
+			String objectId = null;
+			
+			if(inStatic){
+				objectId = "-1";
+			}else{
+				objectId = "((ObjectId)this).getObjectId()";
+			}
+			
+			fileWriter.append(nodeText);
+			
+			//if(nodeText.equals("synchronised")){
+			//	fileWriter.append
+			//	fileWriter.append(nodeText);
+			//}else 
+			if(nodeText.equals("if")){
+				String inProbe = makeProbe("EventType.ifStatement", objectId, child.getLine());
+				String outProbe = "";
+				processBlock(child, fileWriter, inStatic, inProbe, outProbe);
+			}
+			else if(nodeText.equals("while"))
+			{	
+				String inProbe = makeProbe("EventType.whileLoop", objectId, child.getLine());
+				String outProbe = "";
+				processBlock(child, fileWriter, inStatic, inProbe, outProbe);
+			}
+			else if(nodeText.equals("for"))
+			{
+				String inProbe = makeProbe("EventType.forLoop", objectId, child.getLine());
+				String outProbe = "";
+				processBlock(tree, fileWriter, inStatic, inProbe, outProbe);
+			}
+			else if(nodeText.equals("do"))
+			{
+				String inProbe = makeProbe("EventType.doLoop", objectId, child.getLine());
+				String outProbe = "";
+				processBlock(tree, fileWriter, inStatic, inProbe, outProbe);
+			}
+				
+		}
+	}
+	
+				ProcessDataSQL data = new ProcessDataSQL(this);
+			
+			String driver = "org.hsqldb.jdbcDriver";
+			Class.forName(driver).newInstance();
+			
+			System.out.println("Creating Connection: " + (System.currentTimeMillis() - start_time));
+			
+			Connection conn = DriverManager.getConnection("jdbc:hsqldb:file:data;shutdown=true", "sa", "");
+			
+			System.out.println("Creating SQL: " + (System.currentTimeMillis() - start_time));
+			
+			data.createSQL(configuration, conn);
+			
+			System.out.println("After SQL: " + (System.currentTimeMillis() - start_time));
+			
+			String html = renderVisualizationJRuby(conn, configuration);
+			
+			//System.out.println("After render: " + (System.currentTimeMillis() - start_time));
+			
+			// write string to file
+			File directory = getWorkingDirectory(configuration);
+			
+			File file = new File(directory, "visualization.html");
+			
+			FileWriter fw = new FileWriter(file);
+			
+			fw.append(html);
+			
+			fw.close();
+			
+			//System.out.println("After Output: " + (System.currentTimeMillis() - start_time));
+			
+			displayVisualization(configuration, file.getAbsolutePath());
+			
+			conn.close();
+			
+				
+	public String renderVisualization(Connection conn, ILaunchConfiguration configuration) {
+		try {
+			//Velocity.init("/Users/pauljohnson/Masters/Beat/Beat/resources/velocity.properties");
+
+			Velocity.init();
+			
+			VelocityContext context = new VelocityContext();
+			
+			//context.put("td", new TemplateData(conn, configuration, this));
+			
+			// get resource path for css files etc
+			URL resourcesDir = FileLocator.find(Activator.getDefault().getBundle(), 
+					new Path("resources"), null);
+			
+			context.put("filesUrl", FileLocator.toFileURL(resourcesDir).toString().substring(5));
+			
+			InputStream is = FileLocator.openStream(Activator.getDefault().getBundle(), new Path(
+							"resources/visualization.vm"), false);
+
+			InputStreamReader isr = new InputStreamReader(is);
+
+			StringWriter sw = new StringWriter();
+
+			if (Velocity.evaluate(context, sw, "", isr)) {
+				System.out.println(sw.toString());
+				
+				return sw.toString();
+			} else {
+				return null;
+			}
+
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;	
+		}
+	}
+	
+				//			
+//			Velocity.init();
+//			
+//			VelocityContext context = new VelocityContext();
+//			
+//			context.put("td", new TemplateData(conn, configuration, this));
+//			
+//			// get resource path for css files etc
+//			URL resourcesDir = FileLocator.find(Activator.getDefault().getBundle(), 
+//					new Path("resources"), null);
+//			
+//			context.put("filesUrl", FileLocator.toFileURL(resourcesDir).toString().substring(5));
+//			
+//			InputStream is = FileLocator.openStream(Activator.getDefault().getBundle(), new Path(
+//							"resources/visualization.vm"), false);
+//
+//			InputStreamReader isr = new InputStreamReader(is);
+//
+//			StringWriter sw = new StringWriter();
+//
+//			if (Velocity.evaluate(context, sw, "", isr)) {
+//				System.out.println(sw.toString());
+//				
+//				return sw.toString();
+//			} else {
+//				return null;
+//			}
+//
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//			return null;
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//			return null;	
+
+			// complicated case of needing to look up type of variable
+			if(invocationExpression instanceof SimpleName){
+				Type invocationType = findVariableType(invocationExpression);
+				
+				// is the type one of the annotated types? - if so insert probe
+				if(invocationType != null && invocationType.isSimpleType()){
+					SimpleType invocationSimpleType = (SimpleType)invocationType;
+					String invocationString = invocationSimpleType.getName().getFullyQualifiedName();
+					for(IType aType : annotatedTypes){
+						if(aType.getElementName().equals(invocationString)){
+							expressions[0] = ast.newExpressionStatement(makeProbe("methodCall", className, methodName, lineNumber));
+						}
+					}
+				}
+			}else if(invocationExpression instanceof ThisExpression){
+				
+			}else{
+				// do nothing
+			}
+		//}
+		
+				boolean mainArgs = false;
+
+		List parameters = md.parameters();
+
+		if (parameters.size() == 1) {
+			SingleVariableDeclaration svd = (SingleVariableDeclaration) parameters
+					.get(0);
+
+			Type argReturn = svd.getType();
+
+			mainArgs = svd.getExtraDimensions() == 0
+					&& argReturn.isSimpleType()
+					&& ((SimpleType) argReturn).getName().equals("String");
+		}
+		
+		
+			public String renderVisualizationJRuby(Connection conn, ILaunchConfiguration configuration) throws CoreException {
+		try {
+			//System.setProperty("jruby.home", "/Users/pauljohnson/Java/jruby-1.4.0");
+			
+			ScriptingContainer container = new ScriptingContainer();
+			container.getProvider().getRubyInstanceConfig().setJRubyHome("/Users/pauljohnson/Java/jruby-1.4.0");
+			
+			InputStream script = FileLocator.openStream(Activator.getDefault().getBundle(), new Path(
+			"resources/process_visualization.rb"), false);
+			
+			// output
+			StringWriter sw = new StringWriter();
+			container.put("out", sw);
+			
+			// get resource path for css files etc
+			URL resourcesDir = FileLocator.find(Activator.getDefault().getBundle(), 
+					new Path("resources"), null);
+			
+			container.put("filesUrl", FileLocator.toFileURL(resourcesDir).toString().substring(5));
+			
+			// template input
+			InputStream template = FileLocator.openStream(Activator.getDefault().getBundle(), new Path(
+			"resources/visualization.rhtml"), false);
+						
+			container.put("template", new BufferedReader(new InputStreamReader(template)));
+			
+			// inputs for data files
+			IJavaProject javaProject = getJavaProject(configuration);
+			
+			IProject project = javaProject.getProject();
+			
+			project.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+			
+			IFolder eventDataFolder = project.getFolder("beat_thread_data");
+					
+			ArrayList<BufferedReader> eventData = new ArrayList<BufferedReader>();
+			
+			IResource[] files = eventDataFolder.members();
+						
+			for(IResource rfile : files){
+				if(rfile.getType() == IResource.FILE){
+					IFile file = (IFile)rfile;
+					
+					eventData.add(new BufferedReader(new InputStreamReader(file.getContents())));
+				}
+			}
+			
+			container.put("eventData", eventData);
+			
+			// file source
+			container.put("launchConfiguration", configuration);
+			container.put("beatLauncher", this);
+			
+			// switch data file
+			IFile switchData = project.getFile("dtracedata/beat_dtrace_out");
+			
+			container.put("switchData", new BufferedReader(new InputStreamReader(switchData.getContents())));
+			
+			container.runScriptlet(script, "process_visualization.rb");
+			
+			return sw.toString();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}finally{}
+		return "hello";
+	}
+	
+	public String[] getObjectSource(
+			String clazz, ILaunchConfiguration configuration)
+			throws CoreException, JavaModelException {
+
+			IJavaProject project = getJavaProject(configuration);
+			IType type = project.findType(clazz);
+
+			IResource resource = type.getResource();
+			InputStream is = ((IFile) resource).getContents();
+			BufferedReader in = new BufferedReader(new InputStreamReader(is));
+			ArrayList<String> listLines = new ArrayList<String>();
+
+			String line;
+			try {
+				while ((line = in.readLine()) != null) {
+					listLines.add(line);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			return listLines.toArray(new String[] {});
+	}
+	
+	public String getObjectString(
+			String clazz, ILaunchConfiguration configuration)
+			throws CoreException, JavaModelException {
+		IJavaProject project = getJavaProject(configuration);
+		IType type = project.findType(clazz);
+
+		StringBuffer sb = new StringBuffer();
+		
+		IResource resource = type.getResource();
+		InputStream is = ((IFile) resource).getContents();
+		BufferedReader in = new BufferedReader(new InputStreamReader(is));
+
+		String line;
+		try {
+			while ((line = in.readLine()) != null) {
+				sb.append(line);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return sb.toString();
+	}
+	
+		private void createDrawingEvents() {
+		/*
+		 * Create events for drawing lines
+		 */
+		for(Long threadId : threadIds.keySet()){
+			ThreadData td = threadIds.get(threadId);
+			
+			drawingThreads.put(threadId, new ArrayList<DrawEvent>());
+			
+			RawEvent previous = td.events.get(0);
+			
+			for(int i = 1; i < td.events.size(); i++){
+				RawEvent event = td.events.get(i);
+					
+				if(!(ArrayUtils.contains(outTypes, previous.type) && ArrayUtils.contains(inTypes, event.type))){
+					DrawEvent newEvent = new DrawEvent();
+					
+					newEvent.firstEvent = previous;
+					newEvent.secondEvent = event;
+					
+					drawingThreads.get(threadId).add(newEvent);
+				}
+				
+				previous = event;
+			}
+		}
+	}
+	
+	//		System.out.println("------------------------------");
+//		System.out.println("Thread Id: " + threadId);
+//		System.out.println("first event time: " + visualization.startTime);
+//		System.out.println("Start Time: " + startTime);
+//		System.out.println("End Time: " + endTime);
+//		System.out.println("Divider: " + visualization.divider);
+//		System.out.println("y: " + visualization.y);
+//		System.out.println("height: " + visualization.height);
+//		System.out.println("Event Start: " + events.get(0).firstEvent.time);
+//		System.out.println("Event End: " + events.get(0).secondEvent.time);
+
+//			System.out.println("------------------------------");
+//			System.out.println("Event Start: " + event.firstEvent.time);
+//			System.out.println("Event End: " + event.secondEvent.time);
+
+
+package beat.functions;
+
+import java.util.List;
+
+import org.eclipse.swt.browser.Browser;
+import org.eclipse.swt.browser.BrowserFunction;
+
+import beat.Visualization;
+import beat.model.DrawEvent;
+
+public class NextThreadFunction extends BrowserFunction {
+
+	Visualization visualization;
+	
+	public NextThreadFunction(Browser browser, String name, Visualization visualization) {
+		super(browser, name);
+		
+		this.visualization = visualization;
+	}
+	
+	@Override
+	public Object function(Object[] arguments) {
+		
+		int currentIndex = visualization.threadOrder.indexOf(visualization.currentThread);
+		
+		currentIndex++;
+			
+		if(currentIndex >= visualization.threadOrder.size()){
+			return null;
+		}
+		
+		visualization.currentThread = visualization.threadOrder.get(currentIndex);
+		
+		List<DrawEvent> events = visualization.drawingThreads.get(visualization.currentThread);
+		
+		// find start of events for thread
+		long startTime = (long) (visualization.startTime + ( visualization.y * visualization.divider));
+		long endTime = (long)  (visualization.startTime + ((visualization.y + visualization.height) * visualization.divider));
+	
+		visualization.eventsStart = -1;
+		
+		for(int i = 0; i < events.size(); i++){
+			DrawEvent event = events.get(i);
+			
+			if((event.firstEvent.time > startTime && event.secondEvent.time < endTime) ||
+				(event.firstEvent.time > startTime && event.firstEvent.time < endTime) ||
+				(event.secondEvent.time > startTime && event.secondEvent.time < endTime) ||
+				(event.firstEvent.time < startTime && event.secondEvent.time > endTime)){
+				visualization.eventsStart = i;
+				break;
+			}
+		}
+		
+		// find end of events for thread
+		for(int i = events.size()-1; i >= 0; i--){
+			DrawEvent event = events.get(i);
+			
+			if((event.firstEvent.time > startTime && event.secondEvent.time < endTime) ||
+				(event.firstEvent.time > startTime && event.firstEvent.time < endTime) ||
+				(event.secondEvent.time > startTime && event.secondEvent.time < endTime) ||
+				(event.firstEvent.time < startTime && event.secondEvent.time > endTime)){
+				visualization.eventsEnd = i;
+				break;
+			}
+		}
+		
+		return new Double(visualization.currentThread);
+	}
+}
+
+	private ExpressionStatement[] processExpressionStatement(
+			ExpressionStatement statement, String className, String methodName) {
+
+		Expression expression = statement.getExpression();
+
+		switch (expression.getNodeType()) {
+		case (ASTNode.METHOD_INVOCATION):
+			// many different possiblities
+			return processMethodInvocation((MethodInvocation) expression, className,
+					methodName);
+		case (ASTNode.SUPER_METHOD_INVOCATION):
+			return processMethodInvocation((MethodInvocation) expression, className,
+					methodName);
+		// do these later
+		case (ASTNode.FIELD_ACCESS):
+			break;
+		case (ASTNode.SUPER_FIELD_ACCESS):
+			break;
+		default:
+			// ?
+		}
+
+		return null;
+	}
+	
+					ExpressionStatement[] expStatement = processExpressionStatement(
+						(ExpressionStatement) statement, className, methodName);
+				
+				if(expStatement != null){
+					
+					x.previous();
+
+					if (expStatement[0] != null)
+						x.add(expStatement[0]);
+
+					x.next();
+
+					if (expStatement[1] != null)
+						x.add(expStatement[1]);
+				}
+				
+					private ExpressionStatement[] processMethodInvocation(MethodInvocation expression,
+			String className, String methodName) {
+		
+		//String callMethod = methodName;
+		
+		ExpressionStatement[] expressions = new ExpressionStatement[2];
+		
+		Expression invocationExpression = expression.getExpression();
+
+		SimpleName invocationName = expression.getName();
+
+		int lineNumber = getLineNumber(expression.getStartPosition());
+		
+		// simple case of invocation name being one of wait, notify etc
+		String invocationText = invocationName.getFullyQualifiedName();
+
+		String start = null;
+		String end = null;
+		
+		// thread wait
+		if (invocationText.equals("wait")) {
+			start = "lockWaitStart";
+			end = "lockWaitEnd";
+		// thread notify
+		} else if (invocationText.equals("notify")) {
+			start = "lockNotify";
+		// thread notify all
+		} else if (invocationText.equals("notifyAll")) {
+			start = "lockNotifyAll";
+			// thread start point
+		} else if (invocationText.equals("start")) {
+			start = "threadStart";
+			// thread join point
+		} else if (invocationText.equals("join")) {
+			start = "threadJoinStart";
+			end = "threadJoinEnd";
+			// thread sleep point
+		} else if (invocationText.equals("sleep")) {
+			start = "threadSleepStart";
+			end = "threadSleepEnd";
+		} else if (methodNames.contains(invocationText)){
+			start = "methodCall";
+		}
+			
+		// TODO: Probably should be doing it this way, but looking up variables is complicated
+//		if (invocationExpression != null) {
+//			// complicated case of needing to look up type of variable
+//			if (invocationExpression instanceof SimpleName) {
+//				Type invocationType = findVariableType(invocationExpression);
+//
+//				// is the type one of the annotated types? - if so insert probe
+//				if (invocationType != null && invocationType.isSimpleType()) {
+//					SimpleType invocationSimpleType = (SimpleType) invocationType;
+//					String invocationString = invocationSimpleType.getName()
+//							.getFullyQualifiedName();
+//					for (IType aType : annotatedTypes) {
+//						if (aType.getElementName().equals(invocationString)) {
+//							start = "methodCall";
+//							//callMethod = invocationText;
+//						}
+//					}
+//				}
+//			} else if (invocationExpression instanceof ThisExpression) {
+//
+//			} else {
+//				// do nothing ?
+//			}
+//		} else {
+//
+//		}
+		
+		if(start != null){
+			expressions[0] = ast.newExpressionStatement(makeProbe(
+					start, className, methodName, lineNumber));
+			if(end != null){
+				expressions[1] = ast.newExpressionStatement(makeProbe(
+						end, className, methodName, lineNumber));
+			}
+			
+			return expressions;
+		}else{
+			return null;
+		}
+	}
+	
+	//	public static void probe(EventType type, int objectId, String threadName, String objectClass, String methodName, int lineNo, Method method, Class clazz){
+//		TimestampCollector tc = TimestampCollectorTL.get();
+//		
+//		//tc.events.add(new TSEvent(type, objectId, threadName, objectClass, methodName, lineNo, tc.tid));
+//	}
+
+//		tc.sb.append("" + type.toString() + "," + objectId + 
+//				"," + threadName + "," + objectClass + "," + methodName + 
+//				"," + lineNo + "," + tc.tid + "," + System.nanoTime() + "\n");
+
+//		synchronized (lock) {
+//			if(threadName.equals("Producer") && objectClass.equals("producer_consumer.CubbyHole")){
+//				System.out.print("Type: " + type.toString());
+//				System.out.print(" ");
+//				System.out.print("Object Id: " + objectId);
+//				System.out.print(" ");
+//				System.out.print("Thread: " + threadName);
+//				System.out.print(" ");
+//				System.out.print("Object Type: " + objectClass);
+//				System.out.print(" ");
+//				System.out.print("Method: " + methodName);
+//				System.out.print(" ");
+//				System.out.print("Line Number: " + lineNo);
+//				System.out.print(" ");
+//				System.out.print("Timestamp: " + System.nanoTime());
+//				System.out.print(" ");
+//				System.out.print("Pthread Id: " );
+//				System.out.print(tc.tid);
+//				System.out.println(" ");
+//			}
+//		}
+
+
+		// join all other system threads
+		
+		// get root thread group
+//		ThreadGroup rootGroup = Thread.currentThread( ).getThreadGroup( );
+//		ThreadGroup parentGroup;
+//		while ( ( parentGroup = rootGroup.getParent() ) != null ) {
+//		    rootGroup = parentGroup;
+//		}
+//		
+//		System.out.println("Enumerating Threads");
+//		
+//		Thread[] threads = new Thread[ rootGroup.activeCount() ];
+//		while ( rootGroup.enumerate( threads, true ) == threads.length ) {
+//		    threads = new Thread[ threads.length * 2 ];
+//		}
+//		
+//		System.out.println("Joining Threads");
+//		
+//		for(Thread thread : threads){
+//			try {
+//				System.out.println("Joining thread " + thread.getName());
+//				thread.join();
+//				System.out.println("Joined thread " + thread.getName());
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
+
+		for (ICompilationUnit icu : annotatedFiles) {
+			ASTParser astp = ASTParser.newParser(AST.JLS3);
+
+			astp.setSource(icu);
+
+			//currentICU = icu;
+
+			source = icu.getSource();
+
+			Document document = new Document(source);
+
+			ASTNode root = astp.createAST(new NullProgressMonitor());
+
+			ast = root.getAST();
+
+			if (root.getNodeType() == ASTNode.COMPILATION_UNIT) {
+				CompilationUnit cu = (CompilationUnit) root;
+				cu.recordModifications();
+				
+				for (Object t : cu.types()) {
+					TypeDeclaration td = (TypeDeclaration) t;
+
+					currentType = td;
+
+					if (!td.isInterface()) {
+						if (!hasBeat(td))
+							continue;
+						
+						processMethods(td, source);
+
+						addOIDInterface(td);
+					}
+				}
+
+				TextEdit te = cu.rewrite(document, null);
+				te.apply(document);
+				// System.out.println(document.get());
+
+				IResource icuResource = icu.getResource();
+
+				IPath prp = icuResource.getProjectRelativePath();
+
+				File outFile = new File(projectBase + "/preprocessor-"
+						+ prp.toOSString());
+
+				FileWriter fw;
+				try {
+					fw = new FileWriter(outFile);
+
+					fw.append(document.get());
+
+					fw.close();
+
+					sourceFiles.add(outFile);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		
+			private void createDrawingEvents() {
+		/*
+		 * Create events for drawing lines
+		 */
+		for(Long threadId : threadIds.keySet()){
+			ThreadData td = threadIds.get(threadId);
+			
+			//System.out.println("---------------------------------------------");
+			
+			drawingThreads.put(threadId, new ArrayList<DrawEvent>());
+			
+			RawEvent previous = td.events.get(0);
+			
+			DrawEvent current = new DrawEvent();
+			
+			current.startEvent = 0;
+			current.type = Visualization.getLineType(previous);
+			current.startTime = previous.time;
+			current.startOid = previous.object.oid;
+	
+			for(int i = 1; i < td.events.size(); i++){
+				RawEvent event = td.events.get(i);
+				
+				if(!(ArrayUtils.contains(outTypes, previous.type) && ArrayUtils.contains(inTypes, event.type))){
+					String newType = Visualization.getLineType(event);
+					
+					if(!current.type.equals(newType)
+						|| current.startOid != event.object.oid){
+						current.endEvent = i;
+						current.endTime = event.time;
+						current.endOid = event.object.oid;
+						
+						//System.out.println(current);
+						
+						drawingThreads.get(threadId).add(current);
+						
+						current = new DrawEvent(); 
+						
+						current.startEvent = i;
+						current.startTime = event.time;
+						current.startOid = event.object.oid;
+						current.type = newType;
+					}
+				}
+				
+				previous = event;
+			}
+		}		
+	}
+	
+	private void createTextEvents() {
+		for(Integer objectId : objectIds.keySet()){
+			ObjectData od = objectIds.get(objectId);
+			
+			drawingObjects.put(objectId, new ArrayList<TextEvent>());
+			
+			RawEvent previous = od.events.get(0);
+			
+			for(int i = 1; i < od.events.size(); i++){
+				RawEvent event = od.events.get(i);
+					
+				if(!(ArrayUtils.contains(outTypes, previous.type) && ArrayUtils.contains(inTypes, event.type))){
+					TextEvent newEvent = new TextEvent();
+					
+					newEvent.firstEvent = previous;
+					newEvent.secondEvent = event;
+					
+					newEvent.start = (previous.time - startTime) / divider;
+					newEvent.height = (event.time - previous.time) / divider;
+					
+					drawingObjects.get(objectId).add(newEvent);
+				}
+				
+				previous = event;
+			}
+		}
+	}
+	
+			// set previous and next object zones
+		setZoneNextPrevious();
+		
+		//	private void setZoneNextPrevious() {
+//		for(int n = 0; n < events.size(); n++){
+//			if(n == 0){
+//				zones.get(n).previous = null;
+//			}else{
+//				zones.get(n).previous = zones.get(n-1);
+//			}
+//			
+//			if(n == events.size()-1){
+//				zones.get(n).next = null;
+//			}else{
+//				zones.get(n).next = zones.get(n+1);
+//			}
+//			
+//		}
+//	}
+
+
+//	private void createZoneObjects() {
+//		for(int n = 0; n < events.size(); n++){
+//			ObjectZone oz = new ObjectZone();
+//			RawEvent event = events.get(n);
+//			oz.object = event.object;
+//			oz.event = event;
+//			oz.index = n;
+//			zones.add(oz);
+//			
+//			if(objectZones.containsKey(oz.object)){
+//				objectZones.get(oz.object).add(oz);
+//			}else{
+//				List<ObjectZone> x = new ArrayList<ObjectZone>();
+//				x.add(oz);
+//				objectZones.put(oz.object, x);
+//			}
+//		}
+//	}
+
+//	public String getObjectString(BeatLauncher launcher,
+//			String clazz, ILaunchConfiguration configuration)
+//			throws CoreException, JavaModelException {
+//		IJavaProject project = launcher.getJavaProject(configuration);
+//		IType type = project.findType(clazz);
+//
+//		StringBuffer sb = new StringBuffer();
+//		
+//		IResource resource = type.getResource();
+//		InputStream is = ((IFile) resource).getContents();
+//		BufferedReader in = new BufferedReader(new InputStreamReader(is));
+//
+//		String line;
+//		try {
+//			while ((line = in.readLine()) != null) {
+//				sb.append(line);
+//			}
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//		
+//		return sb.toString();
+//	}
+
+	private void createZones(){		
+		// set zone deltas and lines
+		setZoneDeltas();
+		
+		// create a list of iterators for each list of zones
+		List<ListIterator<ObjectZone>> iterators = new ArrayList<ListIterator<ObjectZone>>();
+		
+		Map<ObjectData, ListIterator<ObjectZone>> iteratorsMap = new HashMap<ObjectData, ListIterator<ObjectZone>>();
+		
+		for(List<ObjectZone> zones : objectZones.values()){
+			ListIterator<ObjectZone> iterator = zones.listIterator();
+			iterators.add(iterator);
+			iteratorsMap.put(zones.get(0).object, iterator);
+		}
+		
+		// the maximum height of the previous set of zones
+		long cumulativeMaxPrevious = 0L;
+		
+		while(true){
+			// break if we've reached the end of all the iterators
+			if(CreateZonesHelpers.endOfIterators(iterators))
+				break;
+			
+			// get all next elements
+			List<ObjectZone> next = CreateZonesHelpers.nextZones(iterators);
+					
+			// sort next
+			Collections.sort(next, new IndexComparator());
+
+			// check if elements form a sequence
+			int lastIndex = CreateZonesHelpers.checkSequence(next);			
+						
+			List<ObjectZone> drawZones = next.subList(0, lastIndex);
+						
+			// calculate positions based on cumulative delta
+			ObjectZone prev = drawZones.get(0);
+			
+			// set size of first zone - this will determine the scale of the other zones
+			
+			// we need the maximum of the previous zone
+			ObjectZone prevTemp = getPreviousZone(prev);
+			if(prevTemp != null){
+				long prevCumulativeDelta = getPrevCumulativeDelta(prevTemp);
+			
+				setHeight(cumulativeMaxPrevious, prev, prevCumulativeDelta);
+			}else{
+				prev.cumulativeDelta = 0L;//Visualization.minZoneSpace;
+				prev.correctedDelta = prev.minDelta;
+			}
+			
+			for(int n = 1; n < drawZones.size(); n++){
+				ObjectZone current = drawZones.get(n);
+							
+				ObjectZone prevObject = getPreviousZone(current);
+				
+				long cumulativeDelta = getPrevCumulativeDelta(prevObject);
+
+				setHeight(prev.cumulativeDelta, current, cumulativeDelta);
+								
+				prev = current;
+			}
+
+			// prev will contain the highest time value so set cumulative max
+			cumulativeMaxPrevious = prev.cumulativeDelta;
+					
+			// advance processed iterators to next zone
+			for(ObjectZone oz : drawZones){
+				ListIterator<ObjectZone> iterator = iteratorsMap.get(oz.object);
+				
+				iterator.next();
+			}
+		}
+	}
+	
+	
+				RawEvent previousObjectEvent = getPreviousObjectEvent(previousSetEvent);
+			
+			if(previousObjectEvent != null){
+				long prevCumulativeDelta = getPrevCumulativeDelta(prevTemp);
+			
+				setHeight(cumulativeMaxPrevious, prev, prevCumulativeDelta);
+				
+			}else{
+				// previousObjectEvent being null means that previousSetEvent is the first for the object
+				prev.cumulativeDelta = 0L;//Visualization.minZoneSpace;
+				prev.correctedDelta = prev.minDelta;
+			}
+			
+			for(int n = 1; n < nextEvents.size(); n++){
+				RawEvent current = nextEvents.get(n);
+							
+				RawEvent prevObject = getPreviousObjectEvent(current);
+				
+				long cumulativeDelta = getPrevCumulativeDelta(prevObject);
+
+				setHeight(prev.cumulativeDelta, current, cumulativeDelta);
+								
+				previousSetEvent = current;
+			}
+			
+			//	List<ObjectZone> zones = new ArrayList<ObjectZone>();
+//	Map<ObjectData, List<ObjectZone>> objectZones = new HashMap<ObjectData, List<ObjectZone>>();
+	
+//	private void createZones(){		
+//		// set zone deltas and lines
+//		setZoneDeltas();
+//		
+//		// create a list of iterators for each list of zones
+//		List<ListIterator<ObjectZone>> iterators = new ArrayList<ListIterator<ObjectZone>>();
+//		
+//		Map<ObjectData, ListIterator<ObjectZone>> iteratorsMap = new HashMap<ObjectData, ListIterator<ObjectZone>>();
+//		
+//		for(List<ObjectZone> zones : objectZones.values()){
+//			ListIterator<ObjectZone> iterator = zones.listIterator();
+//			iterators.add(iterator);
+//			iteratorsMap.put(zones.get(0).object, iterator);
+//		}
+//		
+//		// the maximum height of the previous set of zones
+//		long cumulativeMaxPrevious = 0L;
+//		
+//		while(true){
+//			// break if we've reached the end of all the iterators
+//			if(CreateZonesHelpers.endOfIterators(iterators))
+//				break;
+//			
+//			// get all next elements
+//			List<ObjectZone> next = CreateZonesHelpers.nextZones(iterators);
+//					
+//			// sort next
+//			Collections.sort(next, new IndexComparator());
+//
+//			// check if elements form a sequence
+//			int lastIndex = CreateZonesHelpers.checkSequence(next);			
+//						
+//			List<ObjectZone> drawZones = next.subList(0, lastIndex);
+//						
+//			// calculate positions based on cumulative delta
+//			ObjectZone prev = drawZones.get(0);
+//			
+//			// set size of first zone - this will determine the scale of the other zones
+//			
+//			// we need the maximum of the previous zone
+//			ObjectZone prevTemp = getPreviousZone(prev);
+//			if(prevTemp != null){
+//				long prevCumulativeDelta = getPrevCumulativeDelta(prevTemp);
+//			
+//				setHeight(cumulativeMaxPrevious, prev, prevCumulativeDelta);
+//			}else{
+//				prev.cumulativeDelta = 0L;//Visualization.minZoneSpace;
+//				prev.correctedDelta = prev.minDelta;
+//			}
+//			
+//			for(int n = 1; n < drawZones.size(); n++){
+//				ObjectZone current = drawZones.get(n);
+//							
+//				ObjectZone prevObject = getPreviousZone(current);
+//				
+//				long cumulativeDelta = getPrevCumulativeDelta(prevObject);
+//
+//				setHeight(prev.cumulativeDelta, current, cumulativeDelta);
+//								
+//				prev = current;
+//			}
+//
+//			// prev will contain the highest time value so set cumulative max
+//			cumulativeMaxPrevious = prev.cumulativeDelta;
+//					
+//			// advance processed iterators to next zone
+//			for(ObjectZone oz : drawZones){
+//				ListIterator<ObjectZone> iterator = iteratorsMap.get(oz.object);
+//				
+//				iterator.next();
+//			}
+//		}
+//	}
+//
+//	private void setZoneDeltas() {
+//		for(List<ObjectZone> objectZone : objectZones.values()){
+//			ObjectZone previous = objectZone.get(0);
+//			
+//			previous.delta = previous.event.time - (this.startTime - Visualization.minZoneSpace);
+//			for(int n = 1; n < objectZone.size(); n++){
+//				ObjectZone oz = objectZone.get(n);
+//				
+//				// delta
+//				oz.delta = oz.event.time - previous.event.time;
+//				
+//				// number of elapsed lines
+//				oz.lines = oz.event.lineNo - previous.event.lineNo;
+//				
+//				long minDelta = oz.lines * Visualization.lineHeight;
+//				
+//				if(minDelta > Visualization.minZoneHeight){
+//					oz.minDelta = minDelta;
+//				}else{
+//					oz.minDelta = Visualization.minZoneHeight;
+//				}
+//				
+//				previous = oz;
+//			}
+//		}
+//	}
+//
+//	private void setHeight(long cumulativeMaxPrevious, ObjectZone oz,
+//			long prevCumulativeDelta) {
+//		if((prevCumulativeDelta + oz.minDelta) > (cumulativeMaxPrevious + Visualization.minZoneSpace)){
+//			oz.cumulativeDelta = prevCumulativeDelta + oz.minDelta;
+//			oz.correctedDelta = oz.minDelta;
+//		}else{
+//			oz.cumulativeDelta = cumulativeMaxPrevious + Visualization.minZoneSpace;
+//			oz.correctedDelta = oz.cumulativeDelta - prevCumulativeDelta;
+//		}
+//	}
+//
+//	private long getPrevCumulativeDelta(ObjectZone prevObject) {
+//		// handle situation of first zone
+//		long cumulativeDelta;
+//		
+//		if(prevObject == null){
+//			cumulativeDelta = 0L;//Visualization.minZoneSpace;
+//		}else{
+//			cumulativeDelta = prevObject.cumulativeDelta;
+//		}
+//		return cumulativeDelta;
+//	}
+//
+
+		if(startTime == -1 || event.time < startTime){
+			startTime = event.time;
+		}
+		
+		if(endTime == -1 || event.time > endTime){
+			endTime = event.time;
+		}
+		
+					container.put("endTime", endTime);
+			container.put("startTime", startTime);
+			
+			//	public long startTime = -1;
+//	public long endTime = -1;
+
+//	private long setMaxZoneHeight() {
+//		long zoneHeight = 0L;
+//		
+//		for(List<ObjectZone> loz : objectZones.values()){
+//			ObjectZone oz = loz.get(loz.size()-1);
+//			long max = oz.cumulativeDelta+oz.correctedDelta;
+//			if(max > zoneHeight)
+//				zoneHeight = max;
+//		}
+//		
+//		return zoneHeight;
+//	}
+
+			// System.out.println(md.getName().getIdentifier());
+			//			
+			// System.out.println(Integer.toBinaryString(md.getModifiers()));
+			// System.out.println(Integer.toBinaryString(Modifier.SYNCHRONIZED));
+			//			
+			// System.out.println("Is synchronized: " + ((md.getModifiers() &
+			// Modifier.SYNCHRONIZED)>0) );
+			
+			//
+//	private Long[] createPoints(long frameStart, long frameEnd, long pointTime, Integer oid, Long threadId) {
+//		Long[] point = new Long[2];
+//		
+//		// calculate point x
+//		ObjectData object = visualization.objectIds.get(oid);
+//		
+//		int index = visualization.threadOrder.indexOf(threadId);
+//		
+//		point[0] = (long)(object.x + 5 + (3 * index));
+//		
+//		// calculate point y
+//		if(pointTime < frameStart){
+//			point[1] = 0L;
+//		}else if(pointTime > frameEnd){
+//			point[1] = visualization.height;
+//		}else {
+//			point[1] = (Long) (((pointTime - visualization.startTime) / visualization.divider) - visualization.y);
+//		}
+//		
+//		//System.out.println("Point: " + point[0] + " " + point[1]);
+//		
+//		return point;
+//	}
+//	
+//	private int[] calculateEvents(Long threadId){
+//		// find start of events for thread
+//		long startTime = (long) (visualization.startTime + ( visualization.y * visualization.divider));
+//		long endTime = (long)  (visualization.startTime + ((visualization.y + visualization.height) * visualization.divider));
+//		
+//		System.out.println("FrameTime: " + startTime + " " + endTime);
+//		
+//		int[] eventNum = new int[2];
+//		
+//		List<DrawEvent> events = visualization.drawingThreads.get(threadId);
+//		
+//		eventNum[0] = 0;
+//		
+//		for(int x = 0; x < events.size(); x++){
+//			DrawEvent event = events.get(x);
+//			
+//			if(eventIn(startTime, endTime, event)){
+//					eventNum[0] = x;
+//					break;
+//			}
+//		}
+//		
+//		eventNum[1] = events.size();
+//		
+//		for(int x = eventNum[0]; x < events.size(); x++){
+//			DrawEvent event = events.get(x);
+//			
+//			if(eventIn(startTime, endTime, event)){
+//					eventNum[1] = x;
+//					break;
+//			}
+//		}
+//		
+//		System.out.println("Events: " + eventNum[0] + " " + eventNum[1]);
+//		
+//		return eventNum;
+//	}
+//	
+//	private List<Long[][]> calculatePoints(int start, int end, Long threadId) {
+//		List<Long[][]> points = new ArrayList<Long[][]>();
+//		
+//		List<DrawEvent> events = visualization.drawingThreads.get(threadId);
+//
+//		// calculate start of frame 
+//		long frameStart = visualization.y;
+//		long frameEnd = visualization.y + visualization.height;
+//		
+//		System.out.println("Frame Position: " + frameStart + " " + frameEnd);
+//		
+//		for(int i = start; i <= end; i++){
+//			DrawEvent event = events.get(i);
+//			
+//			if(event.startOid != event.endOid){
+//				Long[][] linePoints = new Long[3][2];
+//								
+//				// first point
+//				linePoints[0] = createPoint(frameStart, event.startTime, event.startOid, true, threadId);
+//				// second point
+//				linePoints[1] = createPoint(frameStart, event.endTime, event.startOid, true, threadId);
+//				// third point
+//				linePoints[2] = createPoint(frameEnd, event.endTime, event.endOid, false, threadId);
+//				
+//				points.add(linePoints);
+//			}else{
+//				Long[][] linePoints = new Long[2][2];
+//				
+//				// calculate first point
+//				linePoints[0] = createPoint(frameStart, event.startTime, event.startOid, true, threadId);
+//	
+//				// calculate second point
+//				linePoints[1] = createPoint(frameEnd, event.endTime, event.endOid, false, threadId);
+//
+//				points.add(linePoints);
+//			}
+//		}
+//		return points;
+//	}
+//
+
+		return (event.startTime > startTime && event.endTime < endTime) ||
+			(event.startTime > startTime && event.startTime < endTime) ||
+			(event.endTime > startTime && event.endTime < endTime) ||
+			(event.startTime < startTime && event.endTime > endTime);
+			
+			//		List<DrawEvent> events = visualization.drawingThreads.get(threadId);
+//		
+//		for(int x = 0; x < events.size(); x++){
+//			DrawEvent event = events.get(x);
+//			
+//			//System.out.println(event.type);
+//			
+//			if(eventIn(startTime, endTime, event)){
+//				// add points	
+//				if(event.startOid != event.endOid){
+//					Long[][] linePoints = new Long[3][2];
+//									
+//					// first point
+//					linePoints[0] = createPoints(startTime, endTime, event.startTime, event.startOid, threadId);
+//					// second point
+//					linePoints[1] = createPoints(startTime, endTime, event.endTime, event.startOid, threadId);
+//					// third point
+//					linePoints[2] = createPoints(startTime, endTime, event.endTime, event.endOid, threadId);
+//					
+//					points.add(linePoints);
+//				}else{
+//					Long[][] linePoints = new Long[2][2];
+//					
+//					// calculate first point
+//					linePoints[0] = createPoints(startTime, endTime, event.startTime, event.startOid, threadId);
+//		
+//					// calculate second point
+//					linePoints[1] = createPoints(startTime, endTime, event.endTime, event.endOid, threadId);
+//
+//					points.add(linePoints);
+//				}
+//			}
+//		}
+
+
+
+package beat.functions;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.swt.browser.Browser;
+import org.eclipse.swt.browser.BrowserFunction;
+
+import beat.Visualization;
+import beat.model.DrawEvent;
+import beat.model.ObjectData;
+import beat.model.RawEvent;
+import beat.model.ThreadData;
+
+public class GetDrawPoints extends BrowserFunction {
+	Visualization visualization;
+
+	public GetDrawPoints(Browser browser, String name, Visualization visualization) {
+		super(browser, name);
+		this.visualization = visualization;
+	}
+	
+	@Override
+	public Object function(Object[] arguments) {
+		int threadIndex = ((Double)arguments[0]).intValue();
+		
+		visualization.drawThread = visualization.threadOrder.get(threadIndex);
+			
+		//int[] events = calculateEvents(threadId);
+		
+		//List<Long[][]> points = calculatePoints(events[0], events[1], threadId);
+		
+		List<Long[]> points = getPoints(visualization.drawThread, threadIndex);
+		
+		return points.toArray();
+	}
+	
+	private List<Long[]> getPoints(ThreadData thread, int threadIndex){
+		// find start of events for thread
+		long startPosition = (long)visualization.screenY;
+		long endPosition = (long) startPosition + visualization.screenHeight;
+		
+		List<Long[]> points = new ArrayList<Long[]>();
+		
+		//System.out.println("FrameTime: " + startTime + " " + endTime);
+		
+		//System.out.println("Screen Y: " + visualization.y);
+		
+		RawEvent previous = thread.events.get(0);
+		
+		visualization.startEvent = -1;
+		
+		for(int n = 1; n < thread.events.size(); n++){
+			RawEvent current = thread.events.get(n);
+			
+			int inEvents = eventIn(startPosition, endPosition, previous, current);
+			
+			if(inEvents == 0){
+				if(visualization.startEvent == -1)
+					visualization.startEvent = n;
+				
+				points.add(createPoint());
+				
+			}else if(inEvents == 1){
+				visualization.endEvent = n;
+				break;
+			}
+			
+			previous = current;
+		}
+					
+		return points;
+	}
+
+	private int eventIn(long startPosition, long endPosition, RawEvent previous, RawEvent current) {
+		
+		if(current.position < startPosition)
+			return -1;
+		
+		if(previous.position > endPosition)
+			return 1;		
+		
+		if(previous.position > startPosition && current.position < endPosition||
+				(previous.position > startPosition && previous.position < endPosition) ||
+				(current.position > startPosition && current.position < endPosition) ||
+				(previous.position < startPosition && current.position > endPosition)){
+			return 0;
+		}
+	}
+
+	private Long[] createPoint(long , long frameEnd, long pointTime, Integer oid, int threadIndex) {
+		Long[] point = new Long[2];
+
+		// calculate point x
+		ObjectData object = visualization.objectIds.get(oid);
+
+		point[0] = (long)(object.x + 5 + (3 * threadIndex));
+
+		// calculate point y
+		if(pointTime < frameStart){
+			point[1] = 0L;
+		}else if(pointTime > frameEnd){
+			point[1] = visualization.height;
+		}else {
+			point[1] = (Long) (((pointTime - visualization.startTime) / visualization.divider) - visualization.y);
+		}
+
+		//System.out.println("Point: " + point[0] + " " + point[1]);
+
+		return point;
+	}
+	
+		private Long[] createPoint(int threadIndex, RawEvent event,
+			long startPosition, long endPosition) {
+		Long[] point = new Long[2];
+		
+		point[0] = (long)(event.object.x + 5 + (3 * threadIndex));
+
+		if(event.position < startPosition){
+			point[1] = 0L;
+		}else if(event.position > endPosition){
+			point[1] = visualization.screenHeight;
+		}else {
+			point[1] = event.position - startPosition;
+		}
+		
+		return point;
+	}
+	
+		private void createThread(String[] lsplit, RawEvent event, Map<String, ThreadData> threadMap) {
+		/*
+		 * Create thread
+		 */
+		long tid = Long.decode(lsplit[6].trim());
+		
+		if(threadMap.containsKey(tid)){
+			ThreadData thread = threadMap.get(tid);
+			
+			thread.events.add(event);
+			
+			event.thread = thread;
+		}else{
+			ThreadData thread = new ThreadData();
+			
+			thread.tid = tid;
+			thread.name = lsplit[2].trim();
+			thread.events.add(event);
+			
+			event.thread = thread;
+			
+			threadMap.put(tid, thread);
+		}
+	}
+		
+		//	private void processMethodExpression(String className, String methodName,
+//			ListIterator x, Statement statement, ExpressionStatement es) {
+//		
+//		String[] names = getMethodNames((MethodInvocation) es.getExpression());
+//
+//		// special case of thread start - need to get thread name
+//		if(names[0] != null){
+//			if(names[0].equals("threadStart")){
+//				processThreadStart((MethodInvocation) es.getExpression(), className, methodName,  statement);
+//			}else{
+//				processMethodInvocation(x, names, (MethodInvocation) es.getExpression(), className, methodName);
+//			}
+//		}
+//	}
+//
+
+				
+				switch (expression.getNodeType()) {
+				case (ASTNode.CONSTRUCTOR_INVOCATION):
+					processMethodExpression(className, methodName, x,
+							statement, es);
+					break;
+				case (ASTNode.METHOD_INVOCATION):
+					processMethodExpression(className, methodName, x,
+							statement, es);
+					break;
+				case (ASTNode.SUPER_METHOD_INVOCATION):
+					processMethodExpression(className, methodName, x,
+							statement, es);
+					break;
+				// do these later
+				case (ASTNode.FIELD_ACCESS):
+					break;
+				case (ASTNode.SUPER_FIELD_ACCESS):
+					break;
+				default:
+					// ?
+				}
+				
+				//		Block newBlockStatement = createBlock(inBlock);
+//
+//		if (inBlock != newBlockStatement) {
+//			if (inStatement instanceof ForStatement)
+//				((ForStatement) inStatement).setBody(newBlockStatement);
+//			else if (inStatement instanceof EnhancedForStatement)
+//				((EnhancedForStatement) inStatement).setBody(newBlockStatement);
+//			else if (inStatement instanceof WhileStatement)
+//				((WhileStatement) inStatement).setBody(newBlockStatement);
+//			else if (inStatement instanceof DoStatement)
+//				((DoStatement) inStatement).setBody(newBlockStatement);
+//		}
+
+	/**
+	 * creates a block for drawing text - this is called while setting the positions of events
+	 * 
+	 * it might be clearer to create the blocks in a separate pass
+	 * 
+	 * @param current the current event were processing
+	 * @param previousObjectEvent the previous event by object
+	 * @param tbo the list of object blocks to add to
+	 */
+//	private void createObjectTextBlock(RawEvent current, RawEvent previousObjectEvent) {
+//		ObjectTextBlock otb = new ObjectTextBlock();
+//		
+//		otb.firstEvent = previousObjectEvent;
+//		otb.secondEvent = current;
+//
+//		current.object.textBlockEvents.add(otb);
+//	}s
+
+
+		String[] newInstArgs = new String[instArgs.length + 1];
+		System.arraycopy(instArgs, 0, newInstArgs, 0, instArgs.length);
+		newInstArgs[instArgs.length] = "-javaagent:/Users/pauljohnson/Java/aspectjweaver.jar";
+		
+		Premain-Class: beat.agent.BeatAgent
+Can-Redefine-Classes: true
+
+
+	private void setEventIndent(Map<ThreadObjectData, List<RawEvent>> thing) {
+		
+		for(ObjectData od : objectIds.values()){	
+			
+			List<List<RawEvent>> eventLists = new ArrayList<List<RawEvent>>();
+			
+			for(ThreadData td: threadOrder){
+				ThreadObjectData tod = new ThreadObjectData(td, od);
+				
+				List<RawEvent> todevents = thing.get(tod);
+				
+				eventLists.add(todevents);
+			}
+			
+			if(eventLists.size() == 1){
+				continue;
+			}
+			
+			List<ListIterator<RawEvent>> iterators = new ArrayList<ListIterator<RawEvent>>();
+			
+			Map<ThreadObjectData, ListIterator<RawEvent>> iteratorsMap = new HashMap<ThreadObjectData, ListIterator<RawEvent>>();
+			
+			for(ThreadObjectData x : thing.keySet()){
+				List<RawEvent> e = thing.get(x);
+				
+				ListIterator<RawEvent> iterator = e.listIterator();
+				iterators.add(iterator);
+				iteratorsMap.put(x, iterator);
+			}
+		
+			RawEvent[] current = new RawEvent[2];
+			
+			RawEvent previous = getFirstEvent(iterators);
+			
+			ViewHelpers vh = new ViewHelpers(this);
+			
+			while(true){
+				RawEvent next = getNextEvent(previous, iterators);
+				
+				
+				if(next.thread == previous.thread){
+					if(vh.getBlockType(previous, next).equals("normal")){
+					
+					
+					}else{
+						previous = next;
+					}
+				}else{
+					
+				}
+			}
+		}
+		
+	}
+	
+	private void getNextBlock(List<ListIterator<RawEvent>> iterators, RawEvent[] current){		
+		RawEvent start = null;
+		ListIterator<RawEvent> nextIterator = null;
+		
+		ViewHelpers vh = new ViewHelpers(this);
+		
+		while(true){
+			for(ListIterator<RawEvent> iterator : iterators){
+				if(iterator.hasNext()){
+					RawEvent x = iterator.next();
+					
+					if(start == null || x.index < start.index){
+						start = x;
+						nextIterator = iterator;
+					}else{
+						iterator.previous();
+					}
+				}
+			}
+		
+			if(nextIterator.hasNext()){
+				RawEvent end = nextIterator.next();
+			
+				if(vh.getBlockType(start, end).equals("normal")){
+					
+				}else{
+					
+				}
+			}
+		}
+		
+	}
+
+	private RawEvent getFirstEvent(List<ListIterator<RawEvent>> iterators) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	private RawEvent getNextEvent(RawEvent previous, List<ListIterator<RawEvent>> iterators) {
+
+		return null;
+	}
+	
+		private void setEventPositions(){
+		// create a list of iterators for each list of zones
+		List<ListIterator<RawEvent>> iterators = new ArrayList<ListIterator<RawEvent>>();
+		
+		Map<ObjectData, ListIterator<RawEvent>> iteratorsMap = new HashMap<ObjectData, ListIterator<RawEvent>>();
+		
+		for(ObjectData object : objectIds.values()){
+			ListIterator<RawEvent> iterator = object.events.listIterator();
+			iterators.add(iterator);
+			iteratorsMap.put(object, iterator);
+		}
+
+		/*
+		 * All this is confusing -
+		 * previousEvent is the highest previous event - this could be from the previous set of events or from the current
+		 * previousEvent will be set to the highest event from the current set after the end of processing making it available for 
+		 * the next loop round
+		 */
+		RawEvent previousSetEvent = null;
+		
+		while(true){
+			// break if we've reached the end of all the iterators
+			if(CreateZonesHelpers.endOfIterators(iterators))
+				break;
+			
+			// get all next elements
+			List<RawEvent> nextEvents = CreateZonesHelpers.nextSet(iterators);
+			
+			for(int n = 0; n < nextEvents.size(); n++){
+				RawEvent current = nextEvents.get(n);
+				
+				RawEvent previousObjectEvent = getPreviousObjectEvent(current);
+				
+				if(current.type.equals("loopOut") && previousObjectEvent.equals("loopIn")){
+					previousSetEvent = current;
+					continue;
+				}
+				
+				if(previousSetEvent == null){
+					// current is the first event altogether - we'll position this event using offsets to all positions rather than setting
+					// this to the minZoneSpace or whatever
+					current.position = 0;
+					
+				}else if(previousObjectEvent == null){
+					// current is the first event for the column
+					current.position = previousSetEvent.position + Visualization.minZoneSpace;
+					
+				}else{
+					long newHeight = ViewHelpers.getLineCount(previousObjectEvent, current) * Visualization.lineHeight;
+				
+					if(newHeight < Visualization.minZoneHeight)
+						newHeight = Visualization.minZoneHeight;
+					
+					newHeight += previousObjectEvent.position;
+					
+					if(newHeight < (previousSetEvent.position + Visualization.minZoneSpace))
+						newHeight = previousSetEvent.position + Visualization.minZoneSpace;
+					
+					current.position = newHeight;
+					
+					// this creates the blocks for object drawing
+					//createObjectTextBlock(current, previousObjectEvent);
+				}
+				
+				previousSetEvent = current;
+			}
+			
+			// advance processed iterators to next event
+			advanceIterators(iteratorsMap, nextEvents);
+		}
+		
+		if(previousSetEvent != null){		
+			columnHeight = previousSetEvent.position;
+		}
+	}
+	
+		private void advanceIterators(
+			Map<ObjectData, ListIterator<RawEvent>> iteratorsMap,
+			List<RawEvent> nextSet) {
+		for(RawEvent event : nextSet){
+			ListIterator<RawEvent> iterator = iteratorsMap.get(event.object);
+			
+			iterator.next();
+		}
+	}
+	
+	//	private void createObjectTextBlock(RawEvent current, RawEvent previousObjectEvent) {
+//		ViewHelpers vh = new ViewHelpers(this);
+//		
+//		if(vh.getBlockType(current, previousObjectEvent).equals("normal")){
+//			if(objectBlocks.containsKey(current.tod)){
+//				objectBlocks.get(current.tod).add(new RawEvent[]{previousObjectEvent, current});
+//				
+//			}else{
+//				List<RawEvent[]> x = new ArrayList<RawEvent[]>();
+//				
+//				x.add(new RawEvent[]{previousObjectEvent, current});
+//				
+//				objectBlocks.put(current.tod, x);
+//			}
+//		}
+//	}
+
+//		for(ListIterator<RawEvent[]> iterator : iterators){
+//			if(iterator.hasNext()){
+//				RawEvent[] x = iterator.next();
+//				
+//				if(nextBlock == null || x[0].index < nextBlock[0].index){
+//					nextBlock = x;
+//				}else{
+//					iterator.previous();
+//				}
+//			}
+//		}
+
+
+
++++++++++++++++++
+
+	private void setEventIndent(Set<ThreadObjectData> tods2, Map<ObjectData, List<ThreadObjectData>> objectToTod2) {
+		for(ObjectData od : objectIds.values()){
+			List<ThreadObjectData> objectTODs = objectToTod2.get(od);
+			
+			if(objectTODs.size() == 1){
+				continue;
+			}
+			
+			List<ListIterator<RawEvent>> iterators = new ArrayList<ListIterator<RawEvent>>();
+			
+			Map<ListIterator<RawEvent>, ThreadObjectData> iteratorsMap = new HashMap<ListIterator<RawEvent>, ThreadObjectData>();
+			
+			for(ThreadObjectData tod : objectTODs){
+				ListIterator<RawEvent> iterator = tod.events.listIterator();
+				iterators.add(iterator);
+				iteratorsMap.put(iterator, tod);
+			}
+			
+			RawEvent[] previous = getNextRun(iterators);
+			RawEvent[] next = null;
+			
+			Map<ThreadData, Integer> threadIndents = new HashMap<ThreadData, Integer>();
+			
+			List<RawEvent[]> simEvents = new ArrayList<RawEvent[]>();
+			
+			int simEventsMax = 0;
+			
+			while((next = getNextRun(iterators)) != null){
+				
+				if(simultaneous(previous, next)){
+					if(previous[0].indent == -1){
+						previous[0].indent = 0;
+						previous[1].indent = 0;
+						simEvents.add(previous);
+						threadIndents.put(previous[0].thread, previous[0].indent);
+						simEvents.add(previous);
+						simEventsMax = 1;
+					}
+									
+					if(threadIndents.containsKey(next[0].thread)){
+						int indent = threadIndents.get(next[0].thread);
+						
+						next[0].indent = indent;
+						next[1].indent = indent;
+					}else{
+						next[0].indent = simEventsMax;
+						next[1].indent = simEventsMax;
+							
+						simEventsMax++;
+						
+						threadIndents.put(next[0].thread, next[0].indent);			
+					}
+					
+					simEvents.add(next);
+					
+				}else{
+					for(RawEvent[] r_event : simEvents){
+						r_event[0].max_indent = simEventsMax;
+						r_event[1].max_indent = simEventsMax;
+					}
+					
+					threadIndents.clear();
+					simEvents.clear();
+					simEventsMax = 0;
+				}
+				
+				previous = next;
+			}
+		}
+	}
+		
+	private boolean simultaneous(RawEvent[] previous, RawEvent[] next) {
+		return next[0].position > previous[0].position && next[0].position < previous[1].position;
+	}
+
+	private RawEvent[] getNextRun(List<ListIterator<RawEvent>> iterators) {
+		RawEvent[] nextBlock = new RawEvent[2];
+		
+		ViewHelpers vh = new ViewHelpers(this);
+		
+		while(true){
+			// get the next event
+			ListIterator<RawEvent> nextEvents = getNextEvents(iterators);
+			
+			// get next run of this element
+			// it its 0 elements long then we loop again
+			
+			if(nextEvents.hasNext()){
+				return null;
+			}
+			
+			RawEvent previous = nextEvents.next();
+			RawEvent next = null;
+			
+			while(true){
+				if(nextEvents.hasNext()){
+					RawEvent t = nextEvents.next();
+					if(!vh.getBlockType(previous, t).equals("normal")){
+						break;
+					}else{
+						next = t;
+						previous = next;
+					}
+				}else{
+					break;
+				}
+			}
+			
+			if(next == null){
+				continue;
+			}else{
+				nextBlock[0] = previous;
+				nextBlock[1] = next;
+				break;
+			}
+		}	
+
+		return nextBlock;
+	}
+	
+	private ListIterator<RawEvent> getNextEvents(List<ListIterator<RawEvent>> iterators){
+		ListIterator<RawEvent> next = null;
+		
+		RawEvent nextEvent = null;
+		
+		for(ListIterator<RawEvent> iterator : iterators){
+			if(iterator.hasNext()){
+				RawEvent t = iterator.next();
+				iterator.previous();
+			
+				if(nextEvent == null || t.index < nextEvent.index){
+					nextEvent = t;
+					next = iterator;
+				}
+			}
+		}
+		
+		return next;
+	}
+	
+	
+			Map<Integer, ObjectData> objects = new HashMap<Integer, ObjectData>();
+		Set<ThreadObjectData> tods = new HashSet<ThreadObjectData>();
+		Map<ObjectData, List<ThreadObjectData>> objectToTod2 = new HashMap<ObjectData, List<ThreadObjectData>>();
+		
+		for(int i = 0; i < indents.length; i++){
+			objects.put(i, indents[i].tod.object);
+			tods.add(indents[i].tod);
+			
+			ArrayList<ThreadObjectData> list = new ArrayList<ThreadObjectData>();
+			list.add(indents[i].tod);
+			
+			objectToTod2.put(indents[i].tod.object, list);
+		}
+		
+					if(simultaneous(previous, next)){
+				if(previous.currentIndent == -1){
+					previous.currentIndent = 0;
+					threadIndents.put(previous.tod, previous.currentIndent);
+					simEvents.add(new SimEvent(previous.currentStart, previous.currentEnd, previous.tod.events));
+					simEventsMax = 1;
+				}
+								
+				if(threadIndents.containsKey(next.tod)){
+					int indent = threadIndents.get(next.tod);
+					
+					for(int i = next.currentStart; i < next.currentEnd; i++){
+						next.tod.events.get(i).indent = indent;
+					}
+				}else{
+					for(int i = next.currentStart; i < next.currentEnd; i++){
+						next.tod.events.get(i).indent = simEventsMax;
+					}
+						
+					simEventsMax++;
+					
+					threadIndents.put(next.tod, next.currentIndent);			
+				}
+				
+				simEvents.add(new SimEvent(next.currentStart, next.currentEnd, next.tod.events));
+		
+			}else{
+				for(SimEvent simEvent : simEvents){
+					for(int i = simEvent.currentStart; i < simEvent.currentEnd; i++){
+						simEvent.events.get(i).max_indent = simEventsMax;
+					}
+				}
+				
+				threadIndents.clear();
+				simEvents.clear();
+				simEventsMax = 0;
+			}
+			
+			//				if(previous.currentIndent == -1){
+//					previous.currentIndent = 0;
+//					threadIndents.put(previous.tod, previous.currentIndent);
+//					simEvents.add(new SimEvent(previous.currentStart, previous.currentEnd, previous.tod.events));
+//					simEventsMax = 1;
+//				}
+//								
+//				if(threadIndents.containsKey(next.tod)){
+//					int indent = threadIndents.get(next.tod);
+//					
+//					for(int i = next.currentStart; i < next.currentEnd; i++){
+//						next.tod.events.get(i).indent = indent;
+//					}
+//				}else{
+//					for(int i = next.currentStart; i < next.currentEnd; i++){
+//						next.tod.events.get(i).indent = simEventsMax;
+//					}
+//						
+//					simEventsMax++;
+//					
+//					threadIndents.put(next.tod, next.currentIndent);			
+//				}
+//				
+//				simEvents.add(new SimEvent(next.currentStart, next.currentEnd, next.tod.events));

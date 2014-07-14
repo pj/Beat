@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry exported="true" kind="lib" path="beat.jar"/>
+	<classpathentry kind="lib" path="jruby.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
+	<classpathentry excluding="beat/collector/DataCollectionAspect.aj|beat/collector/DataCollectionAspect.aj|beat/figures/|beat/views/BeatView.java" kind="src" path="src"/>
+	<classpathentry exported="true" kind="lib" path="commons-io-1.4.jar" sourcepath="Beatsrc.zip"/>
+	<classpathentry kind="lib" path="commons-lang-2.4.jar"/>
+	<classpathentry kind="lib" path="/Users/pauljohnson/Java/jruby-1.4.0/lib/jruby.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

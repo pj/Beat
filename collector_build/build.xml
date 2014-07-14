@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ====================================================================== 
+     Aug 11, 2009 10:51:51 AM                                                        
+
+     project    
+     description
+                   
+     pauljohnson                                                                
+     ====================================================================== -->
+<project name="project" default="jars">
+    <description>
+            description
+    </description>
+
+    <!-- ================================= 
+          target: default              
+         ================================= -->
+    <target name="jars"  description="make all files from separate projects into one jar">
+        <jar destfile="Beat/beat.jar"
+        	update="false"
+        	manifest="Beat/collector_build/MANIFEST.MF">
+        	<!--<fileset dir="Beat" includes="META-INF/aop.xml" />-->
+        	<fileset dir="Beat/bin" includes="beat/preprocessor/*"/>
+        	<fileset dir="Beat/bin" includes="beat/collector/*" />
+        </jar> 
+    	<!--<copy todir="/Users/pauljohnson/Java">
+    	<fileset dir="Beat" includes="beat.jar"></fileset>
+    	</copy>-->
+    </target>
+
+   <!-- <target name="compile-grammar" description="Compile java grammar">
+		<java fork="true" classname="org.antlr.Tool">
+			<classpath>
+				<fileset dir="/Users/pauljohnson/Java" includes="*.jar"/>
+			</classpath>
+			<arg value="-o /Users/pauljohnson/masters/Beat/beat-preprocessor/src/beat/preprocessor "/>
+			<arg value="Beat/preprocessor/Java2.g"/>
+		</java>
+    	<move todir="Beat/src/beat/preprocessor">
+    	    <filelist dir="beat/preprocessor">
+    	    	<file name="Java2Lexer.java"/>
+    	    	<file name="Java2Parser.java"/>
+    	    	<file name="Java2.tokens"/>
+    	    </filelist>
+    	</move>
+    </target>
+	
+    <target name="compile-grammar2" description="Compile java grammar">
+		<java fork="true" classname="org.antlr.Tool">
+			<classpath>
+				<fileset dir="/Users/pauljohnson/Java" includes="*.jar"/>
+			</classpath>
+			<arg value="-o /Users/pauljohnson/masters/Beat/beat-preprocessor/src/beat/preprocessor "/>
+			<arg value="Beat/preprocessor2/Java.g"/>
+		</java>
+    	<move todir="Beat/src/beat/preprocessor2">
+    	    <filelist dir="beat/preprocessor2">
+    	    	<file name="JavaLexer.java"/>
+    	    	<file name="JavaParser.java"/>
+    	    	<file name="Java.tokens"/>
+    	    </filelist>
+    	</move>
+    </target>-->
+</project>

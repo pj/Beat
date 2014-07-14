@@ -1,0 +1,24 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Beat Plug-in
+Bundle-SymbolicName: Beat;singleton:=true
+Bundle-Version: 0.0.1
+Bundle-Activator: beat.Activator
+Bundle-Vendor: Paul Johnson
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.debug.core;bundle-version="3.4.1",
+ org.eclipse.debug.ui;bundle-version="3.4.2",
+ org.eclipse.jdt.debug.ui;bundle-version="3.3.1",
+ org.eclipse.jdt.launching;bundle-version="3.4.1",
+ org.eclipse.jdt.debug;bundle-version="3.4.1",
+ org.eclipse.jdt.core;bundle-version="3.4.4",
+ org.eclipse.text;bundle-version="3.5.0",
+ org.junit
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: .,
+ commons-io-1.4.jar,
+ commons-lang-2.4.jar,
+ beat.jar,
+ jruby.jar

@@ -1,0 +1,212 @@
+<pre><% (startLine..endLine).each do |line| %><%= line %> | <%= lines[line] %><br /><% end %></pre>
+
+def draw_lines(events)
+  prev_event = events[0]
+  
+  events[1,events.length].each do |event|
+    if OutTypes.include? prev_event.type and InTypes.include? event.type
+      prev_event = event
+      next
+    end
+    
+    startLine = prev_event.lineNo
+    endLine = event.lineNo
+    
+    if MethodInTypes.include? prev_event.type
+    end
+    
+    height = (event.time - prev_event.time) / TimeDivider
+          
+    yield prev_event.time, ObjectSources[prev_event.object.clazz].source, startLine, endLine, height
+    
+    prev_event = event
+  end
+end
+
+templateERB = ERB.new(template_string, nil, nil, "@output")
+
+TimeDivider = 10000
+
+InTypes = ["forLoopIn","whileLoopIn","doLoopIn"]
+OutTypes = ["forLoopOut","whileLoopOut","doLoopOut"]
+MethodInTypes = ["methodStart","synchronizedMethodEntered"]
+
+while(nextThread() != null){
+	ctx.strokeStyle = getDrawColor();
+	
+	points = getDrawPoints();
+	
+	//log("-----------------");
+	
+	for(x = 0; x < points.length; x++){
+		type = getDrawType(x);
+		line = points[x];
+			
+		//log(line[0][0] + " " + line[0][1]);
+		
+		ctx.moveTo(line[0][0], line[0][1]);
+		
+		for(i = 1; i < line.length; i++){
+			//log(line[i][0] + " " + line[i][1]);
+			ctx.lineTo(line[i][0], line[i][1]); 
+		}
+
+		//log("===================");
+
+		ctx.stroke();
+	}
+}
+
+<% objects.each do |oid, events| %>
+	<div id="<%= oid %>" class="object-column" style="height: <%= ((endTime - startTime) / divider) + 10000 %>px">
+		<div class="object-header">
+			<%= objectNames[oid].clazz %><br /> <span style="color: red;"><%= oid < 0 ? "static" : oid %></span>
+		</div>
+		
+		<div class="column-header"></div>
+		<% events.each do |event| %>
+			<div class="event" style="top: <%= event.start %>px; height: <%= event.height %>px;">
+				
+			</div>
+		<% end %>
+	</div>
+<% end %>
+
+<% events.each do |event| %>
+	<%# puts event.correctedDelta / divider %>
+	<div class="event" style="top: <%= (event.cumulativeDelta / divider) + headerSpace %>px; height: <%= event.correctedDelta / divider %>px;">
+		<%= event.event.type %> <%= event.index %> 
+		<%= (event.cumulativeDelta / divider) %> <%= event.correctedDelta / divider %>
+	</div>
+<% end %>
+
+ctx.save();
+ctx.beginPath();
+ctx.setCompositeOperation("lighter");
+ctx.fillStyle = ptrn;
+ctx.moveTo(line[0][0], line[0][1]);
+
+for(i = 1; i < line.length; i++){
+	//log(line[i][0] + " " + line[i][1]);
+	ctx.lineTo(line[i][0], line[i][1]); 
+}
+
+ctx.stroke();
+ctx.restore();
+
+ctx.save();
+ctx.beginPath();
+ctx.setCompositeOperation("lighter");
+ctx.strokeStyle = color;
+ctx.moveTo(line[0][0], line[0][1]);
+
+for(i = 1; i < line.length; i++){
+	//log(line[i][0] + " " + line[i][1]);
+	ctx.lineTo(line[i][0], line[i][1]); 
+}
+
+ctx.stroke();
+ctx.restore();
+
+var img = new Image(); 
+img.src = 'dash.png';	
+img.onload = function(){
+	canvas = $('#threads')[0];  
+	ctx = canvas.getContext('2d');
+	log("qwer");
+	var ptrn = ctx.createPattern(img,'repeat');
+	
+
+};
+
+<!-- <div class="CodeRay">
+	<div class="code"> -->
+		<pre class="code"><% viewHelper.getSourceLines(previous, event).each do |line| %><%= line %><%= "\n" %><% end %></pre>
+	<!-- </div>
+</div> -->
+
+.ruler {
+	width: 50px;
+	float: left;
+	top: 40px;
+	min-height: 500px;
+	border-right: 1px solid black; 
+/*	position: absolute;*/
+}
+
+.rulerTop {
+	clear: both;
+	top: 40px;
+	background-color: grey;
+}
+
+.rule {
+	border-bottom: 1px solid black;
+	height: 100px;
+}
+
+
+function drawWave(ctx, x, y, color){
+	ctx.strokeStyle = color;
+	ctx.lineWidth = 3;
+	
+	ctx.beginPath();
+	
+	center_y = (icon_height/2)+y;
+	center_x = (icon_width/2)+x;
+	
+	ctx.moveTo(x+4, center_y);
+	
+	ctx.bezierCurveTo(x+8, center_y+6, center_x-4, center_y+6, center_x, center_y);  
+
+	ctx.bezierCurveTo(center_x+4, center_y-6, x+icon_width-8, center_y-6, x+icon_width-4, center_y);  
+	
+	ctx.stroke();
+}
+
+function secondDrawJoin(ctx, x, y, color){
+	drawBox(ctx, x, y, color);
+	
+	ctx.strokeStyle = color;
+	ctx.lineWidth = 3;
+	ctx.lineCap = "square";
+	center_y = (icon_height/2)+y;
+	center_x = (icon_width/2)+x;
+	
+	ctx.beginPath();
+	
+	ctx.moveTo(x+5, center_y);
+	ctx.lineTo(center_x-4, center_y);
+	
+	ctx.moveTo(center_x+4, center_y);
+	ctx.lineTo(x+icon_width-5, center_y);
+	
+
+	ctx.moveTo(center_x+3, center_y-3);
+	ctx.lineTo(center_x+3, center_y+3);
+	
+	ctx.moveTo(center_x-3, center_y-3);
+	ctx.lineTo(center_x-3, center_y+3);
+	
+	ctx.stroke();
+}
+
+function oldDrawJoin(ctx, x, y, color){
+	third_y = (icon_height/3);
+	
+	drawArrow(ctx, x+4, third_y+y, x+icon_width-7, third_y+y, 2, color);
+	
+	drawArrow(ctx, x+4, third_y*2+y, x+icon_width-15, third_y*2+y, 2, color);
+	
+	
+	ctx.strokeStyle = color;
+	ctx.lineWidth = 2;
+	
+	ctx.beginPath();
+	
+	ctx.moveTo(x+icon_width-4, y+4);
+	
+	ctx.lineTo(x+icon_width-4, y+icon_height-4);
+	
+	ctx.stroke();
+}

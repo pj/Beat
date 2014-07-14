@@ -1,0 +1,94 @@
+<!-- <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd"> -->
+
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>visualization</title>
+	<meta name="generator" content="TextMate http://macromates.com/">
+	<meta name="author" content="Paul Johnson">
+	<!-- Date: 2009-10-01 -->
+	<link rel="stylesheet" href="<%= filesUrl %>css/ui-lightness/jquery-ui-1.7.2.custom.css" 
+		type="text/css" media="screen" title="no title" charset="utf-8">
+	<link rel="stylesheet" href="<%= filesUrl %>visualization.css"
+		type="text/css" media="screen" title="no title" charset="utf-8">
+	<link rel="stylesheet" href="<%= filesUrl %>coderay.css" type="text/css" media="screen" title="no title" charset="utf-8">
+		
+	<script src="<%= filesUrl %>jquery-1.4.1.js" 
+		type="text/javascript" charset="utf-8"></script>
+	<script src="<%= filesUrl %>js/jquery-ui-1.7.2.custom.min.js" 
+		type="text/javascript" charset="utf-8"></script>
+
+	<script src="<%= filesUrl %>dashes.js" 
+		type="text/javascript" charset="utf-8"></script>
+	<script src="<%= filesUrl %>icons.js" 
+		type="text/javascript" charset="utf-8"></script>
+	<script src="<%= filesUrl %>draw.js" 
+		type="text/javascript" charset="utf-8"></script>
+	</head>
+<body >
+
+<canvas id="threads" width="1000" height="1000"></canvas>
+
+<style type="text/css" media="screen">
+	<%= threadStyles %>
+	
+	<%= objectStyles %>
+</style>
+
+<script type="text/javascript" charset="utf-8">
+	cssIndent = <%= viewHelper.cssIndent %>;
+</script>
+
+<div id="visualization">
+	<div id="sidebar" style="height: <%= headerSpace + columnHeight + 20 %>px">
+		<div id="event-details">
+			Event Details
+		</div>
+		
+		<div id="thread-colors">
+			<div>Thread colors</div>
+			<%= threadColorBox %>
+		</div>
+	</div>
+	
+	<% viewHelper.getObjectOrder.each do |object| %>
+		<div id="<%= object.oid %>" class="object-column object-column-<%= object.oid %>" style="height: <%= headerSpace + columnHeight + 50 %>px">
+			<div class="object-header">
+				<%= object.clazz %><br /> <span><%= object.oid < 0 ? "static" : object.oid %></span>
+			</div>
+			
+			
+			<div class="column-header"></div>
+			
+			<% viewHelper.getTODS(object).each do |tod| %>
+			
+				<% previous = tod.events.get(0)
+			   		inSynchronized = {}
+				%>
+			
+				<% (1..tod.events.size()-1).each do |n| 
+					event = tod.events.get(n)
+					break if checkExit(previous, event)
+					next if checkLooping(previous, event)
+					checkSynchronizedIn(previous, event, inSynchronized)
+					%>
+				
+					<div class="<%= eventClass(previous, event, inSynchronized)%>" 
+						style="<%= eventStyle(previous, event, headerSpace)%>">
+					
+						<pre class="code"><% removeIndent(previous, event).each do |line| %><%= line %><%= "\n" %><% end %></pre>
+					
+						<%= eventDetails(previous, event)%>
+					</div>
+				
+					<% viewHelper.textLogging(previous, event)
+						checkSynchronizedOut(event, inSynchronized) 
+						previous = event %>
+				<% end %>
+			<% end %>
+		</div>
+	<% end %>
+</div>
+</body>
+</html>
